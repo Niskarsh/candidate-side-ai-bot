@@ -1,0 +1,22 @@
+{
+  "name": "ai-orchestrator-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "CRA client + Express server with LLM planner and tool-calling agents",
+  "scripts": {
+    "server:dev": "npm --prefix server run dev",
+    "server:start": "npm --prefix server run start",
+    "client:start": "npm --prefix client run start",
+    "client:build": "npm --prefix client run build",
+
+    "dev": "concurrently -k -n SERVER,CLIENT -c yellow,cyan \"npm:server:dev\" \"npm:client:start\"",
+    "start": "concurrently -k -n SERVER,CLIENT -c yellow,cyan \"npm:server:start\" \"npm:client:start\"",
+
+    "build": "npm run client:build",
+
+    "postinstall": "npm --prefix server i && npm --prefix client i"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
