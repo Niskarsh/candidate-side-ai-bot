@@ -59,6 +59,7 @@ export const ProfileFinishSchema = {
   type: SchemaType.OBJECT,
   properties: {
     finalMessage: { type: SchemaType.STRING },
+
     updatedProfile: {
       type: SchemaType.OBJECT,
       properties: {
@@ -68,12 +69,41 @@ export const ProfileFinishSchema = {
         skills: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
         links: {
           type: SchemaType.OBJECT,
-          properties: { linkedin: { type: SchemaType.STRING, nullable: true } }
+          properties: {
+            linkedin: { type: SchemaType.STRING, nullable: true }
+          }
         },
-        experiences: { type: SchemaType.ARRAY, items: { type: SchemaType.OBJECT } },
-        educations: { type: SchemaType.ARRAY, items: { type: SchemaType.OBJECT } }
+
+        // ✅ define minimal shapes for array items
+        experiences: {
+          type: SchemaType.ARRAY,
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              company: { type: SchemaType.STRING, nullable: true },
+              title: { type: SchemaType.STRING, nullable: true },
+              date_range: { type: SchemaType.STRING, nullable: true },
+              location: { type: SchemaType.STRING, nullable: true },
+              description: { type: SchemaType.STRING, nullable: true }
+            }
+          }
+        },
+        educations: {
+          type: SchemaType.ARRAY,
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              school: { type: SchemaType.STRING, nullable: true },
+              degree: { type: SchemaType.STRING, nullable: true },
+              field_of_study: { type: SchemaType.STRING, nullable: true },
+              start_year: { type: SchemaType.STRING, nullable: true },
+              end_year: { type: SchemaType.STRING, nullable: true }
+            }
+          }
+        }
       }
     },
+
     missingFields: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
   },
   required: ["finalMessage"]
