@@ -54,7 +54,7 @@ Always choose between:
     if (step1.toolCalls.length > 0) {
       const call = step1.toolCalls[0];
       const toolResult = await executeTool(call.name, call.args);
-
+      console.log(`6666666666666666 toolResult`, toolResult)
       // Step 2: reflect on tool result; either ask another question (emit_question), or FINISH
       const step2 = await geminiPlanStep({
         systemInstruction: this.systemPrompt + `\nCurrentProfile:\n${JSON.stringify(priorProfile ?? {}, null, 2)}`,

@@ -54,6 +54,7 @@ chatRouter.post("/", async (req, res) => {
       focusedAgent: orchestrator.snapshot.focusedAgent
     });
   } catch (e: any) {
+    console.error("Chat error:", e);
     return res.status(500).json({ error: e?.message ?? "chat_failed" });
   }
 });

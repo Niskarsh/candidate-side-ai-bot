@@ -48,7 +48,9 @@ export async function geminiPlanStep(opts: {
   }
 
   const { response } = await model.generateContent(request);
+  console.log(`4444444444444444`, JSON.stringify(response, null, 2))
   const toolCalls = response.functionCalls?.() ?? [];
+  console.log(`5555555555555555 toolCalls`, toolCalls)
   const text = response.text();
   return { text, toolCalls };
 }

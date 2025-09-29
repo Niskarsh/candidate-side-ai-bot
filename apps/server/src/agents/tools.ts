@@ -1,5 +1,6 @@
 import type { FunctionDeclaration } from "@google/generative-ai";
 import { enrichLinkedIn } from "../services/linkedin.js";
+import { dummyLinkedIn } from "./dummy.js";
 
 export type ToolExecution = (args: any) => Promise<any>;
 export type ToolSpec = {
@@ -57,8 +58,14 @@ export const askUserTool: ToolSpec = {
 export const TOOLBOX: ToolSpec[] = [linkedinTool, askUserTool];
 export const toolDeclarations = TOOLBOX.map(t => t.toFunctionDeclaration());
 export async function executeTool(name: string, args: any) {
+  if (name === 'linkedin_enrich') {
+    return dummyLinkedIn;
+  }
   const t = TOOLBOX.find(x => x.name === name);
   if (!t) throw new Error(`Unknown tool: ${name}`);
   const result = await t.run(args);
   return { name, result };
 }
+
+
+

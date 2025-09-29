@@ -17,7 +17,7 @@ export async function enrichLinkedIn(linkedin_url: string, extras?: Record<strin
     include_company_public_url: 'true',
     ...extras
   };
-
+console.log(`2222222222222222`, process.env.RAPIDAPI_KEY, process.env.RAPIDAPI_HOST);
   const headers = {
     'x-rapidapi-key': process.env.RAPIDAPI_KEY!,
     'x-rapidapi-host': process.env.RAPIDAPI_HOST ?? 'fresh-linkedin-profile-data.p.rapidapi.com'
