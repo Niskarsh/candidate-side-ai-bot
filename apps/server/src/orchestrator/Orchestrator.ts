@@ -1,22 +1,14 @@
 import type { ChatMessage } from "./types.js";
-import type { OrchestratorDecision } from "./types.js";
-import { findAgentByName, firstCapable } from "./registry.js";
-import type { Agent } from "../agents/Agent.js";
-
-/**
- * Orchestrator = Lead Agent.
- * - Maintains global convo & ephemeral profile state (in-memory for now)
- * - Decides whether to speak itself OR delegate to a sub-agent
- * - Relays sub-agent follow-ups to the user and retains/returns control
- * - Keeps track of "agent in focus" until done
- *
- * (We keep rules explicit here; you can also LLM-route using structured output.)  :contentReference[oaicite:4]{index=4}
- */
+import { listAgents, findAgentByName } from "./registry.js";
+import { runOrchestratorPolicy } from "../services/policy.js";
 
 export type OrchestratorState = {
   focusedAgent?: string | null;
   profile: any;
   history: ChatMessage[];
+  hasWelcomed: boolean;
+  summary: string;
+  lastDelegationAnnouncedFor?: string | null;
 };
 
 export class Orchestrator {
@@ -27,69 +19,22 @@ export class Orchestrator {
       profile: {},
       history: [],
       focusedAgent: null,
+      hasWelcomed: false,
+      summary: "",
+      lastDelegationAnnouncedFor: null,
       ...initial
     };
   }
 
   get snapshot() { return this.state; }
 
-  decide(message: string): OrchestratorDecision {
-    // Naive classifier for demo:
-    const msg = message.toLowerCase();
-
-    // If a sub-agent is already in focus, keep it unless user says "stop" or "done"
-    if (this.state.focusedAgent && !/stop|done|cancel/.test(msg)) {
-      return {
-        intent: "continue_delegation",
-        delegateTo: this.state.focusedAgent,
-        userFacingReply: "Okay, continuing…",
-        keepAgentInFocus: true
-      };
-    }
-
-    // Route to ProfileBuilder on profile/gaps/linkedin
-    if (/(profile|linkedin|enrich|experience|skills|education)/.test(msg)) {
-      const agent = firstCapable("profile_enrichment");
-      return {
-        intent: "profile_enrichment",
-        delegateTo: agent?.name ?? null,
-        userFacingReply: "Sure—let me work on your profile.",
-        keepAgentInFocus: true
-      };
-    }
-
-    // Smalltalk / default
-    return {
-      intent: "smalltalk",
-      delegateTo: null,
-      userFacingReply: "I’m your orchestrator. Tell me if you want to build or update your profile."
-    };
-  }
-
-  async delegateTo(agent: Agent, params: {
-    userMessage: string;
-  }) {
-    const result = await agent.run({
-      userMessage: params.userMessage,
-      priorProfile: this.state.profile,
-      history: this.state.history
-    });
-
-    // Collect outputs
-    if (result.messages?.length) {
-      for (const m of result.messages) {
-        this.state.history.push({ role: "assistant", content: m });
-      }
-    }
-    if (result.updatedProfile) {
-      this.state.profile = { ...this.state.profile, ...result.updatedProfile };
-    }
-    if (result.takeBackControl) {
-      this.state.focusedAgent = null;
-    }
-
-    // If sub-agent asked a follow-up, keep focus and return the question
-    return result;
+  getWelcome(): string[] {
+    if (this.state.hasWelcomed) return [];
+    this.state.hasWelcomed = true;
+    return [
+      "Hi, I’m your Orchestrator 🤝",
+      "I can build or enrich your candidate profile. Paste your LinkedIn URL, or say “build my profile”. I’ll ask only what’s needed."
+    ];
   }
 
   absorbUserMessage(message: string) {
@@ -98,5 +43,118 @@ export class Orchestrator {
 
   setFocus(agentName?: string | null) {
     this.state.focusedAgent = agentName ?? null;
+  }
+
+  // very light “summary” maintenance to show the policy; replace with a better summarizer later
+  private updateSummary(turnText: string) {
+    const keep = (this.state.summary ? this.state.summary + " • " : "") + turnText;
+    this.state.summary = keep.split(" • ").slice(-3).join(" • ");
+  }
+
+  async decideWithPolicy(message: string) {
+    // convert history to model format
+    const chat = this.state.history.map(m => ({ role: m.role === "assistant" ? "model" : "user", text: m.content }));
+    const registry = listAgents(); // [{name, description}]
+
+    const { text, toolCalls } = await runOrchestratorPolicy({
+      userMessage: message,
+      agentRegistry: registry,
+      profile: this.state.profile,
+      summary: this.state.summary,
+      chatHistory: chat
+    });
+
+    // If model returned plain text, treat it as a direct reply
+    if (!toolCalls.length) {
+      return { action: "reply", payload: { text: text || "Okay." } } as const;
+    }
+
+    const call = toolCalls[0];
+    if (call.name === "orchestrator_reply") {
+      return { action: "reply", payload: { text: call.args?.text ?? text ?? "Okay." } } as const;
+    }
+    if (call.name === "ask_user") {
+      return { action: "ask", payload: { question: call.args?.question ?? "Could you clarify?" } } as const;
+    }
+    if (call.name === "delegate") {
+      return { action: "delegate", payload: { agentName: String(call.args?.agentName || ""), briefInput: String(call.args?.briefInput || "") } } as const;
+    }
+    if (call.name === "end_focus") {
+      return { action: "end_focus", payload: {} } as const;
+    }
+    return { action: "reply", payload: { text: text || "Okay." } } as const;
+  }
+
+  async step(message: string) {
+    const out = await this.decideWithPolicy(message);
+console.log(`88888888888888888 out`, out)
+    if (out.action === "reply") {
+      const t = out.payload.text;
+      this.state.history.push({ role: "assistant", content: t });
+      this.updateSummary(t);
+      return { messages: [t] };
+    }
+
+    if (out.action === "ask") {
+      const q = out.payload.question;
+      this.state.history.push({ role: "assistant", content: q });
+      this.updateSummary("asked: " + q);
+      return { messages: ["❓ " + q] };
+    }
+
+    if (out.action === "end_focus") {
+      this.setFocus(null);
+      return { messages: ["Okay—taking it from here."] };
+    }
+
+    if (out.action === "delegate") {
+      const agentName = out.payload.agentName || "ProfileBuilder";
+      const agent = findAgentByName(agentName);
+      if (!agent) return { messages: [`I don't have an agent named "${agentName}".`] };
+
+      // Announce delegation once per agent session
+      // if (this.state.focusedAgent !== agentName && this.state.lastDelegationAnnouncedFor !== agentName) {
+      //   this.state.lastDelegationAnnouncedFor = agentName;
+      //   this.state.history.push({ role: "assistant", content: `Bringing in ${agentName}…` });
+      // }
+
+      // Announce delegation once per agent session
+      if (this.state.focusedAgent !== agentName) {
+        this.state.lastDelegationAnnouncedFor = agentName;
+        this.state.history.push({ role: "assistant", content: `Bringing in ${agentName}…` });
+      }
+
+      this.setFocus(agentName);
+
+      // handoff: the sub-agent uses the message and current profile
+      const result = await agent.run({
+        userMessage: message,
+        priorProfile: this.state.profile,
+        history: this.state.history
+      });
+console.log(`99999999999999999 result`, result)
+      const msgs: string[] = [];
+      if (result.messages?.length) {
+        msgs.push(...result.messages);
+        result.messages.forEach(m => this.state.history.push({ role: "assistant", content: m }));
+      }
+      if (result.followUpQuestion) {
+        msgs.push("❓ " + result.followUpQuestion);
+        this.state.history.push({ role: "assistant", content: result.followUpQuestion });
+      }
+      if (result.updatedProfile) {
+        this.state.profile = { ...this.state.profile, ...result.updatedProfile };
+      }
+      if (result.takeBackControl) {
+        this.setFocus(null);
+        this.state.lastDelegationAnnouncedFor = null;
+      }
+
+      if (!msgs.length) msgs.push("Working on it…");
+      this.updateSummary(msgs[0]);
+      return { messages: msgs };
+    }
+
+    return { messages: ["Okay."] };
   }
 }

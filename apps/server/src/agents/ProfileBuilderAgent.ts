@@ -13,12 +13,25 @@ import { toolDeclarations, executeTool } from "./tools.js";
  */
 export class ProfileBuilderAgent implements Agent {
   name = "ProfileBuilder";
-  description = "Builds and enriches a candidate's profile using tools and clarifying questions.";
+  description = `This sub agent works with orchestrator agent and builds and enriches a candidate's profile using function tool calls which can fetch linkedin data if linkedin url is provided or can ask user specific questions to fill gaps in profile. If linkedin url is provided, process that data and fill up andy gaps in data.
+  Switching Criteria:
+  - If user provides linkedin url and we have not yet enriched, call linkedin_enrich.
+  - If key fields are missing (name, headline, location, 1-2 experiences, skills), ask specific questions to fill gaps.
+  - If user refuses to provide linkedin url, switch to Q&A mode and do not ask for linkedin again.
+  - When profile is sufficiently complete, finish and hand back control to orchestrator.
+  
+  `;
   systemPrompt = `
 You are the Profile Builder Agent.
 Goal: produce a high-quality candidate profile with fields:
 {name, headline, location, skills[], links{linkedin}, experiences[], educations[]}
 
+Switching Criteria:
+  - If user provides linkedin url and we have not yet enriched, call linkedin_enrich.
+  - If key fields are missing (name, headline, location, 1-2 experiences, skills), ask specific questions to fill gaps.
+  - If user refuses to provide linkedin url, switch to Q&A mode and do not ask for linkedin again.
+  - When profile is sufficiently complete, finish and hand back control to orchestrator.
+  
 Tools available:
 - linkedin_enrich(linkedin_url: string)
 - emit_question(question: string)
@@ -29,6 +42,9 @@ Rules:
 3) If key fields remain missing, call emit_question with a specific, short question.
 4) When satisfied, FINISH with JSON (finalMessage, updatedProfile, missingFields).
 5) Be concise and friendly.
+
+If the user declines LinkedIn, do NOT ask again. Switch to Q&A mode:
+ask for name, headline, location, 1–2 key experiences, top skills (one short question at a time).
 
 Always choose between:
 - TOOL CALL (one at a time)
@@ -67,19 +83,20 @@ Always choose between:
         finishSchema: ProfileFinishSchema as any
       });
 
+      // ...after step2 (the reflection step)
       if (step2.toolCalls.length > 0) {
         const next = step2.toolCalls[0];
         if (next.name === "emit_question") {
           return {
-            messages: ["I need a bit more info to complete your profile."],
+            messages: ["I need a bit more info to finish your profile."],
             followUpQuestion: String(next.args?.question ?? "Could you clarify?"),
             takeBackControl: false
           };
         }
-        return { messages: ["Working on it…"] }; // (Next HTTP turn executes next tool)
+        // defer next tool to next HTTP turn
+        return { messages: ["Working on it…"], takeBackControl: false };
       }
 
-      // Try to FINISH with structured JSON
       try {
         const finish = JSON.parse(step2.text);
         return {
@@ -89,8 +106,13 @@ Always choose between:
           takeBackControl: true
         };
       } catch {
-        return { messages: ["Profile updated."], takeBackControl: true };
+        // ✅ default: never return a silent turn
+        return {
+          messages: ["I’ve analyzed what you shared. Do you want me to pull from LinkedIn, or build from Q&A instead?"],
+          takeBackControl: false
+        };
       }
+
     }
 
     // No tool call—maybe can FINISH now
