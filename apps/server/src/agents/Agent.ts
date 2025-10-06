@@ -6,14 +6,23 @@ export type AgentRunResult = {
     takeBackControl?: boolean;     // signal orchestrator to resume speaking
   };
   
-  export interface Agent {
+  export class Agent {
     name: string;
     description: string;
     systemPrompt: string;
+    history: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+    constructor(name: string, description: string, systemPrompt: string) {
+      this.name = name;
+      this.description = description;
+      this.systemPrompt = systemPrompt;
+    }
     run(params: {
       userMessage: string;
       priorProfile?: any;
       history: Array<{ role: "user" | "assistant"; content: string }>;
-    }): Promise<AgentRunResult>;
+    }): Promise<AgentRunResult> {
+      throw new Error("Not implemented");
+    };
   }
   
