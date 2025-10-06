@@ -22,7 +22,7 @@ export class Orchestrator extends Agent {
         focusedAgent: string | null;
         aliveAgents?: any[];
     };
-    
+
     constructor(toolsAvailable?: Array<{ name: string; description: string }>, schemasAvailable?: Array<any>
     ) {
         super(
@@ -54,11 +54,14 @@ export class Orchestrator extends Agent {
         return ['Hello! I am your Orchestrator agent, here to assist you with various tasks. How can I help you today?'];    
     }
 
-    step(message: string) {
-        this.absorbMessage(message);
-        console.log('history', this.history);
+    async step(message: string) {
+        // this.absorbMessage(message);
+        console.log('Orchestrator stepping with message:', message);
+        const resp = await this.run({ userMessage: message });
+        // console.log('history', this.history, 'resp', resp.candidates[0]);
         return {
-            messages: ['This is a stub response from the Orchestrator agent.']
+            messages: [resp.candidates?.[0]?.content?.parts?.[0]?.text ?? ''],
+            // messages: [],
         }
     }
 }

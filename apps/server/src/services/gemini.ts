@@ -15,11 +15,12 @@ const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
 export async function geminiGenAI({
   model,
-  contents,
+  messages,
   config = {},
 }: {
   model: string;
-  contents: Array<{ role: "user" | "model" | "tool"; text: string; name?: string }>;
+  // contents: Array<{ role: "user" | "model" | "tool"; parts: Array<{ text?: string; functionCall?: { name: string; arguments: any }; functionResponse?: { name: string; response: any } }> }>;
+  messages: Array<{ role: "user" | "model"; content: string }>;
   config?: {
     [key: string]: any;
     tools?: Array<{
@@ -28,105 +29,109 @@ export async function geminiGenAI({
   };
 }): Promise<GenerateContentResponse> {
   if (!model) throw new Error("No model specified");
+  let contents = messages.map(m => ({
+    role: m.role,
+    parts: [{ text: m.content }],
+  }))
   return client.models.generateContent({
     model,
     contents: contents,
-    config: config
+    config
   });
 }
 
-export async function geminiPlanStep(opts: {
-  systemInstruction: string;
-  chatHistory: Array<{ role: "user" | "model" | "tool"; text: string; name?: string }>;
-  userMessage?: string;
-  functionDeclarations: FunctionDeclaration[];
-  finishSchema?: any;
-}) {
-  const model = getModel(process.env.GEMINI_MODEL);
+// export async function geminiPlanStep(opts: {
+//   systemInstruction: string;
+//   chatHistory: Array<{ role: "user" | "model" | "tool"; text: string; name?: string }>;
+//   userMessage?: string;
+//   functionDeclarations: FunctionDeclaration[];
+//   finishSchema?: any;
+// }) {
+//   const model = getModel(process.env.GEMINI_MODEL);
 
-  const contents: any[] = [];
-  for (const m of opts.chatHistory) {
-    if (m.role === "tool") {
-      contents.push({
-        role: "tool",
-        parts: [{ functionResponse: { name: m.name!, response: { result: m.text } } }]
-      });
-    } else {
-      contents.push({ role: m.role, parts: [{ text: m.text }] });
-    }
-  }
-  if (opts.userMessage) contents.push({ role: "user", parts: [{ text: opts.userMessage }] });
+//   const contents: any[] = [];
+//   for (const m of opts.chatHistory) {
+//     if (m.role === "tool") {
+//       contents.push({
+//         role: "tool",
+//         parts: [{ functionResponse: { name: m.name!, response: { result: m.text } } }]
+//       });
+//     } else {
+//       contents.push({ role: m.role, parts: [{ text: m.text }] });
+//     }
+//   }
+//   if (opts.userMessage) contents.push({ role: "user", parts: [{ text: opts.userMessage }] });
 
-  const request: any = {
-    systemInstruction: opts.systemInstruction,
-    contents,
-    tools: [{ functionDeclarations: opts.functionDeclarations }],
-    generationConfig: {}
-  };
+//   const request: any = {
+//     systemInstruction: opts.systemInstruction,
+//     contents,
+//     tools: [{ functionDeclarations: opts.functionDeclarations }],
+//     generationConfig: {}
+//   };
 
-  if (opts.finishSchema) {
-    request.generationConfig.responseMimeType = "application/json";
-    request.generationConfig.responseSchema = opts.finishSchema;
-  }
+//   if (opts.finishSchema) {
+//     request.generationConfig.responseMimeType = "application/json";
+//     request.generationConfig.responseSchema = opts.finishSchema;
+//   }
 
-  const { response } = await model.generateContent(request);
-  console.log(`4444444444444444`, JSON.stringify(response, null, 2))
-  const toolCalls = response.functionCalls?.() ?? [];
-  console.log(`5555555555555555 toolCalls`, toolCalls)
-  const text = response.text();
-  return { text, toolCalls };
-}
+//   const { response } = await model.generateContent(request);
+//   console.log(`4444444444444444`, JSON.stringify(response, null, 2))
+//   const toolCalls = response.functionCalls?.() ?? [];
+//   console.log(`5555555555555555 toolCalls`, toolCalls)
+//   const text = response.text();
+//   return { text, toolCalls };
+// }
 
-export const ProfileFinishSchema = {
-  type: SchemaType.OBJECT,
-  properties: {
-    finalMessage: { type: SchemaType.STRING },
+// export const ProfileFinishSchema = {
+//   type: SchemaType.OBJECT,
+//   properties: {
+//     finalMessage: { type: SchemaType.STRING },
 
-    updatedProfile: {
-      type: SchemaType.OBJECT,
-      properties: {
-        name: { type: SchemaType.STRING, nullable: true },
-        headline: { type: SchemaType.STRING, nullable: true },
-        location: { type: SchemaType.STRING, nullable: true },
-        skills: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-        links: {
-          type: SchemaType.OBJECT,
-          properties: {
-            linkedin: { type: SchemaType.STRING, nullable: true }
-          }
-        },
+//     updatedProfile: {
+//       type: SchemaType.OBJECT,
+//       properties: {
+//         name: { type: SchemaType.STRING, nullable: true },
+//         headline: { type: SchemaType.STRING, nullable: true },
+//         location: { type: SchemaType.STRING, nullable: true },
+//         skills: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+//         links: {
+//           type: SchemaType.OBJECT,
+//           properties: {
+//             linkedin: { type: SchemaType.STRING, nullable: true }
+//           }
+//         },
 
-        // ✅ define minimal shapes for array items
-        experiences: {
-          type: SchemaType.ARRAY,
-          items: {
-            type: SchemaType.OBJECT,
-            properties: {
-              company: { type: SchemaType.STRING, nullable: true },
-              title: { type: SchemaType.STRING, nullable: true },
-              date_range: { type: SchemaType.STRING, nullable: true },
-              location: { type: SchemaType.STRING, nullable: true },
-              description: { type: SchemaType.STRING, nullable: true }
-            }
-          }
-        },
-        educations: {
-          type: SchemaType.ARRAY,
-          items: {
-            type: SchemaType.OBJECT,
-            properties: {
-              school: { type: SchemaType.STRING, nullable: true },
-              degree: { type: SchemaType.STRING, nullable: true },
-              field_of_study: { type: SchemaType.STRING, nullable: true },
-              start_year: { type: SchemaType.STRING, nullable: true },
-              end_year: { type: SchemaType.STRING, nullable: true }
-            }
-          }
-        }
-      }
-    },
+//         // ✅ define minimal shapes for array items
+//         experiences: {
+//           type: SchemaType.ARRAY,
+//           items: {
+//             type: SchemaType.OBJECT,
+//             properties: {
+//               company: { type: SchemaType.STRING, nullable: true },
+//               title: { type: SchemaType.STRING, nullable: true },
+//               date_range: { type: SchemaType.STRING, nullable: true },
+//               location: { type: SchemaType.STRING, nullable: true },
+//               description: { type: SchemaType.STRING, nullable: true }
+//             }
+//           }
+//         },
+//         educations: {
+//           type: SchemaType.ARRAY,
+//           items: {
+//             type: SchemaType.OBJECT,
+//             properties: {
+//               school: { type: SchemaType.STRING, nullable: true },
+//               degree: { type: SchemaType.STRING, nullable: true },
+//               field_of_study: { type: SchemaType.STRING, nullable: true },
+//               start_year: { type: SchemaType.STRING, nullable: true },
+//               end_year: { type: SchemaType.STRING, nullable: true }
+//             }
+//           }
+//         }
+//       }
+//     },
 
-    missingFields: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
-  },
-  required: ["finalMessage"]
-} as const;
+//     missingFields: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
+//   },
+//   required: ["finalMessage"]
+// } as const;
