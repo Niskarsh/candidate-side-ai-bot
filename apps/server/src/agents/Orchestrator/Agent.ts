@@ -26,7 +26,7 @@ export class Orchestrator extends Agent {
     constructor(toolsAvailable?: Array<{ name: string; description: string }>, schemasAvailable?: Array<any>
     ) {
         super(
-            name, description, systemPrompt, [], toolsAvailable, schemasAvailable
+            name, description, systemPrompt, [], toolsAvailable, schemasAvailable, 'Hello! I am your Orchestrator agent, here to assist you with various tasks. How can I help you today?'
         );
         this.currentState = {
             profile: {
@@ -48,10 +48,11 @@ export class Orchestrator extends Agent {
             ikigaiCollected: false,
             focusedAgent: null,
         };
+        this.history.push({ role: "model", content: this.WELCOME_MESSAGE });
     }
 
     getWelcome() {
-        return ['Hello! I am your Orchestrator agent, here to assist you with various tasks. How can I help you today?'];    
+        return [this.WELCOME_MESSAGE];    
     }
 
     async step(message: string) {

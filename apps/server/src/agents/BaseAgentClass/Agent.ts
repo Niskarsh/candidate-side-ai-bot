@@ -16,9 +16,11 @@ export type AgentRunResult = {
     history: Array<{ role: "user" | "model"; content: string }> = [];
     toolsAvailable: Array<{ name: string; description: string }> = [];
     schemasAvailable: Array<any> = [];
+    WELCOME_MESSAGE = "";
 
     constructor(
-      name: string, description: string, systemPrompt: string, history?: Array<{ role: "user" | "model"; content: string }>, toolsAvailable?: Array<{ name: string; description: string }>, schemasAvailable?: Array<any>
+      name: string, description: string, systemPrompt: string, history?: Array<{ role: "user" | "model"; content: string }>, toolsAvailable?: Array<{ name: string; description: string }>, schemasAvailable?: Array<any>,
+      WELCOME_MESSAGE?: string,
     ) {
       this.name = name;
       this.description = description;
@@ -26,6 +28,7 @@ export type AgentRunResult = {
       if (history) this.history = history;
       if (toolsAvailable) this.toolsAvailable = toolsAvailable;
       if (schemasAvailable) this.schemasAvailable = schemasAvailable;
+      if (WELCOME_MESSAGE) this.WELCOME_MESSAGE = WELCOME_MESSAGE;
     }
     async run({
       userMessage,
