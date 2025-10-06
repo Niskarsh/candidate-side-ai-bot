@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, SchemaType, FunctionDeclaration } from "@google/generative-ai";
+import { GoogleGenAI, FunctionDeclaration, GenerateContentResponse } from "@google/genai";
 // import * as dotenv from "dotenv";
 // dotenv.config();
 console.log(`3333333333333333`, process.env.GEMINI_API_KEY)
@@ -7,10 +7,32 @@ console.log(`3333333333333333`, process.env.GEMINI_API_KEY)
  * Function calling allows the model to CHOOSE a tool and pass parameters;
  * structured output (responseSchema) forces JSON shape when finishing.  :contentReference[oaicite:1]{index=1}
  */
-const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
-export function getModel(modelName = "gemini-1.5-flash") {
-  return client.getGenerativeModel({ model: modelName });
+// export function getModel(modelName = "gemini-1.5-flash") {
+//   return client.getGenerativeModel({ model: modelName });
+// }
+
+export async function geminiGenAI({
+  model,
+  contents,
+  config = {},
+}: {
+  model: string;
+  contents: Array<{ role: "user" | "model" | "tool"; text: string; name?: string }>;
+  config?: {
+    [key: string]: any;
+    tools?: Array<{
+      functionDeclarations: FunctionDeclaration[];
+    }>;
+  };
+}): Promise<GenerateContentResponse> {
+  if (!model) throw new Error("No model specified");
+  return client.models.generateContent({
+    model,
+    contents: contents,
+    config: config
+  });
 }
 
 export async function geminiPlanStep(opts: {

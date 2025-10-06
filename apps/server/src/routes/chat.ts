@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { Orchestrator } from "../orchestrator/Orchestrator.js";
+import { Orchestrator } from '../agents/Orchestrator/Agent';
 
 const orchestrator = new Orchestrator();
 export const chatRouter = Router();
 
 chatRouter.get("/hello", (_req, res) => {
   const messages = orchestrator.getWelcome();
-  res.json({ messages, profilePreview: orchestrator.snapshot.profile, focusedAgent: orchestrator.snapshot.focusedAgent });
+  res.json({ messages, profilePreview: orchestrator.currentState.profile, focusedAgent: orchestrator.currentState.focusedAgent });
 });
 
 chatRouter.post("/", async (req, res) => {
@@ -16,12 +16,11 @@ chatRouter.post("/", async (req, res) => {
   }
 
   try {
-    orchestrator.absorbUserMessage(message);
     const turn = await orchestrator.step(message);
     res.json({
       messages: turn.messages,
-      profilePreview: orchestrator.snapshot.profile,
-      focusedAgent: orchestrator.snapshot.focusedAgent
+      profilePreview: orchestrator.currentState.profile,
+      focusedAgent: orchestrator.currentState.focusedAgent
     });
   } catch (e: any) {
     console.error("[ORCH ERROR]", e);

@@ -1,6 +1,6 @@
-import type { FunctionDeclaration } from "@google/generative-ai";
-import { enrichLinkedIn } from "../services/linkedin.js";
-import { dummyLinkedIn } from "./dummy.js";
+import type { FunctionDeclaration } from "@google/genai";
+import { enrichLinkedIn } from "../../services/linkedin";
+import { dummyLinkedIn } from "../dummy";
 
 export type ToolExecution = (args: any) => Promise<any>;
 export type ToolSpec = {
