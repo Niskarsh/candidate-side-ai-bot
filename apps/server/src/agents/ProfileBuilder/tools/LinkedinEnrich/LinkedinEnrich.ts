@@ -1,2 +1,21 @@
 import { Tool } from "../../../BaseAgent/Tools";
-export class LinkedinEnrich extends Tool {}
+import { name, description, parameters, enrichLinkedIn } from './ToolDetails';
+export class LinkedinEnrich extends Tool {
+    linkedinUrl: string | null;
+    constructor(linkedinUrl: string | null = null) {
+        super(
+            name,
+            description,
+            parameters
+        );
+        if (linkedinUrl) {
+            this.linkedinUrl = linkedinUrl;
+        } else {
+            this.linkedinUrl = null;
+        }
+    }
+    async run(args: any) {
+        const result = await enrichLinkedIn(String(this.linkedinUrl));
+        return result;
+    };
+}

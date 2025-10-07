@@ -14,11 +14,11 @@ export class Tool {
     description: string;
     parameters: any;
 
-    constructor(name: string, description: string, parameters: any, run: ToolExecution) {
+    constructor(name: string, description: string, parameters: any) {
         this.name = name;
         this.description = description;
         this.parameters = parameters;
-        this.run = run;
+        // this.run = run;
     }
 
     asFnDecl(spec: ToolSpec): FunctionDeclaration {
