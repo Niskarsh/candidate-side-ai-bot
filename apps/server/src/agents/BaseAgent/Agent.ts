@@ -69,12 +69,24 @@ export class Agent {
   async run({
     userMessage,
     priorProfile,
+    subAgents,
   }: {
     userMessage: string;
     priorProfile?: any;
+    subAgents?: {
+      name: string;
+      description: string;
+      systemPrompt: string;
+      toolsAvailable: {
+        name: any;
+        description: any;
+      }[];
+    }[]
   }) {
     this.history.push({ role: "user", content: userMessage });
-    const updatedSystemPrompt = this.systemPrompt.replace("{{Current-State}}", JSON.stringify(priorProfile || {}));
+    let updatedSystemPrompt = this.systemPrompt.replace("{{Current-State}}", JSON.stringify(priorProfile || {}));
+    updatedSystemPrompt = updatedSystemPrompt.replace("{{Sub-Agents}}", JSON.stringify(subAgents || {}));
+    console.log('Updated system prompt:', updatedSystemPrompt);
     const response = await geminiGenAI({
       // model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
       model: 'gemini-2.0-flash',
@@ -82,33 +94,8 @@ export class Agent {
       system_instruction: updatedSystemPrompt,
       tools: this.toolsAvailable
     });
-    // console.log('gemini response', JSON.stringify(response, null, 2));
-    let responseText = '';
-    if (response.candidates) {
-      await Promise.all(response.candidates.map(async (candidate: Candidate) => {
-        if (candidate.content) {
-          if (candidate.content?.parts) {
-            for (const part of candidate.content?.parts) {
-              if (part.text) {
-                responseText += part.text;
-              } else if (part.functionCall) {
-                if (part.functionCall.name) {
-                  let functionTool = this.fetchToolObjByName(part.functionCall.name);
-                  let functionResponseText = await functionTool.run(part.functionCall.args);
-                  // console.log('Function call response:', functionResponseText);
-                  responseText += functionResponseText;
-                }
-              }
-            }
-          }
-        }
-      }));
-    }
 
-    // this.history.push({ role: "model", content: response.candidates?.[0]?.content?.parts?.[0]?.text || "" });
-    // console.log(`gemini response`, JSON.stringify(response, null, 2));
-    return responseText;
-    // throw new Error("Not implemented");
+    return response;
   };
 
   absorbMessage(message: string) {

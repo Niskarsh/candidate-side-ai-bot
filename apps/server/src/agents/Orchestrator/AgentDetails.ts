@@ -1,13 +1,8 @@
 import { FunctionDeclaration, Type } from "@google/genai";
-import { ProfileBuilder } from "../ProfileBuilder/Agent";
 
 export const name = 'Orchestrator';
 export const description= "The Orchestrator agent manages the overall conversation flow, decides which sub-agent to delegate tasks to, and maintains the user's profile.";
 
-// Add more sub-agents here as they are created
-export const subAgentList = [
-  new ProfileBuilder().agentDetails(),
-];
 
 export const systemPrompt = `
 <Description>
@@ -26,7 +21,7 @@ Below is the current state of the user's profile. Use this(and conversation hist
 
 These are sub-agents you can delegate tasks to:
 <Sub-Agents>
-${JSON.stringify(subAgentList, null, 2)}
+{{Sub-Agents}}
 </Sub-Agents>
 `;
 
