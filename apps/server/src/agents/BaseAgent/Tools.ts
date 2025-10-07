@@ -21,16 +21,16 @@ export class Tool {
         // this.run = run;
     }
 
-    asFnDecl(spec: ToolSpec): FunctionDeclaration {
+    asFnDecl(): FunctionDeclaration {
         return {
-            name: spec.name,
-            description: spec.description,
-            parameters: spec.parameters
+            name: this.name,
+            description: this.description,
+            parameters: this.parameters
         };
     }
-    async run(args: any) {
-        // This returns data for the orchestrator/UI to surface.
-        return { question: String(args.question) };
-    }
-    toFunctionDeclaration() { return this.asFnDecl(this); }
+    // async run(args: any) {
+    //     // This returns data for the orchestrator/UI to surface.
+    //     return { question: String(args.question) };
+    // }
+    toFunctionDeclaration() { return this.asFnDecl(); }
 }

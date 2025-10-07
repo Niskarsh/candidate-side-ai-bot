@@ -40,7 +40,7 @@ export class Orchestrator extends Agent {
             systemPrompt,
             [],
             // orchestratorTools,
-            schemasAvailable,
+            // schemasAvailable,
             'Hello! I am your Orchestrator agent, here to assist you with various tasks. How can I help you today?',
             toolsDir, // toolsDir
         );
@@ -72,10 +72,10 @@ export class Orchestrator extends Agent {
     async step(message: string) {
         // this.absorbMessage(message);
         console.log('Orchestrator stepping with message:', message);
-        const resp = await this.run({ userMessage: message });
-        console.log('history', this.history, 'resp', JSON.stringify(resp.candidates[0]));
+        const resp = await this.run({ userMessage: message, priorProfile: this.currentState.profile });
+        console.log('history', this.history, 'resp', resp);
         return {
-            messages: [resp.candidates?.[0]?.content?.parts?.[0]?.text ?? ''],
+            messages: [resp],
             // messages: [],
         }
     }

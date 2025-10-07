@@ -1,9 +1,12 @@
-export const name = `linkedin_enrich`;
-export const description = `Fetch and normalize a candidate profile from a LinkedIn public URL.`;
+import { Type } from "@google/genai";
+
+export const name = `delegate`;
+export const description = `Delegate to a known sub-agent by name, and pass a detailed instruction on what it is expected to do.`;
 export const parameters = {
-    type: "OBJECT",
+    type: Type.OBJECT,
     properties: {
-        linkedin_url: { type: "STRING", description: "Public LinkedIn profile URL" }
+        agentName: { type: Type.STRING },
+        detailedInput: { type: Type.STRING, description: "Detailed description on what this agent is supposed to do, with what input. We will have separate system instructions, so this will more describe how to handle the input" }
     },
-    required: ["linkedin_url"]
+    required: ["agentName", "detailedInput"]
 };

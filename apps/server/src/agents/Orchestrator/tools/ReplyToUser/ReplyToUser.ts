@@ -8,8 +8,8 @@ export class ReplyToUser extends Tool {
             parameters
         );
     }
-    // async run(args: any) {
-    //     const result = await enrichLinkedIn(String(this.linkedinUrl));
-    //     return result;
-    // };
+    async run(args: any): Promise<string> {
+        let text = args.text;
+        return new Promise((resolve) => resolve(text)); // simulate delay
+    };
 }
