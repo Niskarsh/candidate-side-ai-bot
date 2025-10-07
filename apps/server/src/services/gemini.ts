@@ -1,7 +1,6 @@
 import { GoogleGenAI, FunctionDeclaration, GenerateContentResponse } from "@google/genai";
 // import * as dotenv from "dotenv";
 // dotenv.config();
-console.log(`3333333333333333`, process.env.GEMINI_API_KEY)
 /**
  * Minimal Gemini wrapper for function-calling and structured output.
  * Function calling allows the model to CHOOSE a tool and pass parameters;

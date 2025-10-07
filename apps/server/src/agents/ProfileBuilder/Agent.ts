@@ -1,6 +1,6 @@
 import { Agent } from "../BaseAgent/Agent";
 import { name, description, systemPrompt } from "./AgentDetails";
-export class Orchestrator extends Agent {
+export class ProfileBuilder extends Agent {
     currentState: {
         profile: {
             workExperience: {
@@ -19,14 +19,13 @@ export class Orchestrator extends Agent {
             summary: string | null;
         };
         ikigaiCollected: boolean;
-        focusedAgent: string | null;
-        aliveAgents?: any[];
+        linkedinUrl: string | null;
     };
 
     constructor(toolsAvailable?: Array<{ name: string; description: string }>, schemasAvailable?: Array<any>
     ) {
         super(
-            name, description, systemPrompt, [], toolsAvailable, schemasAvailable, 'Hello! I am your Orchestrator agent, here to assist you with various tasks. How can I help you today?'
+            name, description, systemPrompt, [], toolsAvailable, schemasAvailable, ''
         );
         this.currentState = {
             profile: {
@@ -46,7 +45,7 @@ export class Orchestrator extends Agent {
                 summary: null,
             },
             ikigaiCollected: false,
-            focusedAgent: null,
+            linkedinUrl: null,
         };
         if (this.WELCOME_MESSAGE) {
             this.history.push({ role: "model", content: this.WELCOME_MESSAGE });
