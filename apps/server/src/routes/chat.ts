@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Orchestrator } from '../agents/Orchestrator/Agent';
 
 const orchestrator = new Orchestrator();
+
 export const chatRouter = Router();
 
 chatRouter.get("/hello", (_req, res) => {
@@ -16,6 +17,9 @@ chatRouter.post("/", async (req, res) => {
   }
 
   try {
+    if (!orchestrator.toolsInitDone) {
+      await orchestrator.initTools();
+    }
     const turn = await orchestrator.step(message);
     res.json({
       messages: turn.messages,

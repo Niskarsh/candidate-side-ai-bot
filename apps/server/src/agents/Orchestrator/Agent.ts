@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Agent } from "../BaseAgent/Agent";
 import { name, description, systemPrompt } from "./AgentDetails";
 export class Orchestrator extends Agent {
@@ -23,10 +25,24 @@ export class Orchestrator extends Agent {
         aliveAgents?: any[];
     };
 
-    constructor(toolsAvailable?: Array<{ name: string; description: string }>, schemasAvailable?: Array<any>
+    constructor(
+        schemasAvailable?: Array<any>
     ) {
+        // @ts-expect-error The 'import.meta' meta-property is only allowed
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = path.dirname(__filename);
+
+        const toolsDir = path.resolve(__dirname, "tools");
+
         super(
-            name, description, systemPrompt, [], toolsAvailable, schemasAvailable, 'Hello! I am your Orchestrator agent, here to assist you with various tasks. How can I help you today?'
+            name,
+            description,
+            systemPrompt,
+            [],
+            // orchestratorTools,
+            schemasAvailable,
+            'Hello! I am your Orchestrator agent, here to assist you with various tasks. How can I help you today?',
+            toolsDir, // toolsDir
         );
         this.currentState = {
             profile: {
@@ -57,7 +73,7 @@ export class Orchestrator extends Agent {
         // this.absorbMessage(message);
         console.log('Orchestrator stepping with message:', message);
         const resp = await this.run({ userMessage: message });
-        // console.log('history', this.history, 'resp', resp.candidates[0]);
+        console.log('history', this.history, 'resp', JSON.stringify(resp.candidates[0]));
         return {
             messages: [resp.candidates?.[0]?.content?.parts?.[0]?.text ?? ''],
             // messages: [],

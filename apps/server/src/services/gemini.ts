@@ -14,28 +14,40 @@ const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
 export async function geminiGenAI({
   model,
+  system_instruction,
   messages,
+  tools,
   config = {},
 }: {
   model: string;
   // contents: Array<{ role: "user" | "model" | "tool"; parts: Array<{ text?: string; functionCall?: { name: string; arguments: any }; functionResponse?: { name: string; response: any } }> }>;
   messages: Array<{ role: "user" | "model"; content: string }>;
-  config?: {
-    [key: string]: any;
-    tools?: Array<{
-      functionDeclarations: FunctionDeclaration[];
-    }>;
-  };
+  system_instruction: string;
+  config?: { [key: string]: any; };
+  tools?: any[];
 }): Promise<GenerateContentResponse> {
   if (!model) throw new Error("No model specified");
+  if (!system_instruction) throw new Error("No system_instruction specified");
   let contents = messages.map(m => ({
     role: m.role,
     parts: [{ text: m.content }],
   }))
+  let configObj = { ...config };
+  if (tools && tools.length > 0) {
+    let toolsDec: FunctionDeclaration[] = tools.map(tool => tool.toFunctionDeclaration());
+    configObj.tools = [{
+      functionDeclarations: toolsDec,
+    }];
+  }
+  configObj.systemInstruction = {
+    parts: [{
+      text: system_instruction,
+    }],
+  };
   return client.models.generateContent({
     model,
     contents: contents,
-    config
+    config: configObj,
   });
 }
 
