@@ -6,6 +6,7 @@ import { Candidate } from "@google/genai";
 import { ProfileBuilder } from "../ProfileBuilder/Agent";
 import { name as OrchestratorReplyToUserToolName } from './tools/ReplyToUser/ToolDetails';
 import { name as OrchestratorDelagateToSubAgentToolName } from './tools/DelagateToSubAgent/ToolDetails';
+import { Ikigai } from "../Ikigai/Agent";
 export class Orchestrator extends Agent {
     profile: {
         workExperience: {
@@ -87,9 +88,12 @@ export class Orchestrator extends Agent {
     async getSubAgentList() {
         // Add more sub-agents here as they are created
         let profileBuilder = new ProfileBuilder();
+        let ikigai = new Ikigai();
         await profileBuilder.initTools();
+        await ikigai.initTools();
         const subAgentList = [
-            profileBuilder.agentDetails(),
+            // profileBuilder.agentDetails(),
+            ikigai.agentDetails(),
         ];
         return subAgentList;
     }
@@ -166,7 +170,7 @@ export class Orchestrator extends Agent {
                                 args: functionCall.args,
                                 orchestratorThread: this,
                             });
-                            console.log('Delegation function call response:', userReply, focusedAgentName, focusedAgent, updatedProfile, endFocus);
+                            // console.log('Delegation function call response:', userReply, focusedAgentName, focusedAgent, updatedProfile, endFocus);
                             // If focussed agent is not present in alive agents, then add to alive agents
                             if (focusedAgent) {
                                 let focussedAgentObj = this.getFocussedAgentObject();

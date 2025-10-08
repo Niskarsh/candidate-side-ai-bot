@@ -70,11 +70,16 @@ export class Agent {
     userMessage,
     priorProfile,
     isLinkedinDataPulled,
+    ikigaiExerciseState,
     subAgents,
+    config,
   }: {
     userMessage: string;
     priorProfile?: any;
     isLinkedinDataPulled?: boolean;
+    config?: {
+      [key: string]: any;
+    } | undefined;
     subAgents?: {
       name: string;
       description: string;
@@ -83,7 +88,15 @@ export class Agent {
         name: any;
         description: any;
       }[];
-    }[]
+    }[],
+    ikigaiExerciseState?: {
+      questions: {
+        question: string,
+        options: string[],
+        answer: string
+      }[]
+      questionsDone: number,
+    }
   }) {
     this.history.push({ role: "user", content: userMessage });
     let updatedSystemPrompt = this.systemPrompt.replace("{{Current-State}}", JSON.stringify(priorProfile || {}));
@@ -91,13 +104,17 @@ export class Agent {
     if (isLinkedinDataPulled !== undefined) {
       updatedSystemPrompt = updatedSystemPrompt.replace("{{Linkedin-Data-Pulled}}", String(isLinkedinDataPulled));
     }
-    console.log('Updated system prompt:', updatedSystemPrompt);
+    if (ikigaiExerciseState !== undefined) {
+      updatedSystemPrompt = updatedSystemPrompt.replace("{{Ikigai-Exercise-State}}", JSON.stringify(ikigaiExerciseState || {}));
+    }
+    // console.log('Updated system prompt:', updatedSystemPrompt);
     const response = await geminiGenAI({
       // model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
       model: 'gemini-2.0-flash',
       messages: this.history,
       system_instruction: updatedSystemPrompt,
-      tools: this.toolsAvailable
+      tools: this.toolsAvailable,
+      config,
     });
 
     return response;

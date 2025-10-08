@@ -3,38 +3,20 @@ import { fileURLToPath } from "node:url";
 import { Agent } from "../BaseAgent/Agent";
 import { name, description, systemPrompt } from "./AgentDetails";
 import { Candidate } from "@google/genai";
-import { name as ProfileBuilderLinkedinEnrichToolName } from './tools/LinkedinEnrich/ToolDetails';
+import { name as ProfileBuilderIkigaiToolName } from './tools/Ikigai/ToolDetails';
 import { name as ProfileBuilderReplyToOrchestratorToolName } from './tools/ReplyToOrchestrator/ToolDetails';
 import { name as ProfileBuilderUpdateProfileFromUserInputsToolName } from './tools/UpdateProfileFromUserInputs/ToolDetails';
 import { geminiGenAI } from "../../services/gemini";
-import { LinkedInProfileSchema, ProfileBuilderReturnSchema } from "./Schemas";
-export class ProfileBuilder extends Agent {
-    currentState: {
-        profile: {
-            workExperience: {
-                details: Record<string, any>[],
-                complete: boolean;
-            },
-            skills: {
-                details: string[],
-                complete: boolean;
-            },
-            education: {
-                details: Record<string, any>[],
-                complete: boolean;
-            },
-            interests: {
-                details: string[],
-                complete: boolean;
-            },
-            summary: {
-                details: string | null,
-                complete: boolean;
-            },
-        };
-        ikigaiCollected: boolean;
-        linkedinDataPulled: boolean;
-    };
+import { IkigaiQuestionReturnSchema } from "./Schemas";
+export class Ikigai extends Agent {
+    ikigai: {
+        questions: {
+            question: string,
+            options: string[],
+            answer: string
+        }[]
+        questionsDone: number,
+    }
 
     constructor(toolsAvailable?: Array<{ name: string; description: string }>, schemasAvailable?: Array<any>
     ) {
@@ -46,32 +28,11 @@ export class ProfileBuilder extends Agent {
         super(
             name, description, systemPrompt, [], '', toolsDir
         );
-        this.currentState = {
-            profile: {
-                workExperience: {
-                    details: [],
-                    complete: false,
-                },
-                skills: {
-                    details: [],
-                    complete: false,
-                },
-                education: {
-                    details: [],
-                    complete: false,
-                },
-                interests: {
-                    details: [],
-                    complete: false,
-                },
-                summary: {
-                    details: null,
-                    complete: false,
-                },
-            },
-            ikigaiCollected: false,
-            linkedinDataPulled: false,
-        };
+        this.ikigai = {
+            questions: [],
+            questionsDone: 0,
+        }
+        
         if (this.WELCOME_MESSAGE) {
             this.history.push({ role: "model", content: this.WELCOME_MESSAGE });
         }
@@ -79,15 +40,20 @@ export class ProfileBuilder extends Agent {
 
     async step(message: string) {
         // this.absorbMessage(message);
-        console.log('ProfileBuilder stepping with message:', message);
-        const response = await this.run({ userMessage: message, priorProfile: this.currentState.profile, isLinkedinDataPulled: this.currentState.linkedinDataPulled });
-        console.log('ProfileBuilder run response:', JSON.stringify(response));
+        console.log('Ikigai stepping with message:', message);
+        const response = await this.run({ userMessage: message, ikigaiExerciseState: this.ikigai,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: IkigaiQuestionReturnSchema,
+            }
+        });
+        console.log('Ikigai run response:', JSON.stringify(response));
         let responseText = '';
         let functionCall = response.candidates[0].content?.parts[0].functionCall;
         if (functionCall) {
             if (functionCall.name) {
                 switch (functionCall.name) {
-                    case ProfileBuilderLinkedinEnrichToolName: {
+                    case ProfileBuilderIkigaiToolName: {
                         let functionTool = this.fetchToolObjByName(functionCall.name);
                         let linkedInData = await functionTool.run({ args: functionCall.args });
                         this.currentState.linkedinDataPulled = true;
