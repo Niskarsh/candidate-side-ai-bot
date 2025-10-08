@@ -27,7 +27,7 @@ export class Orchestrator extends Agent {
         ikigaiCollected: boolean;
     };
     focusedAgent: string | null;
-    aliveAgents?: any[];
+    aliveAgents: any[];
 
     constructor() {
         // @ts-expect-error The 'import.meta' meta-property is only allowed
@@ -66,6 +66,7 @@ export class Orchestrator extends Agent {
             ikigaiCollected: false,
         };
         this.focusedAgent = null;
+        this.aliveAgents = [];
         if (this.WELCOME_MESSAGE) {
             this.history.push({ role: "model", content: this.WELCOME_MESSAGE });
         }
@@ -136,10 +137,30 @@ export class Orchestrator extends Agent {
                                         }
                                         case OrchestratorDelagateToSubAgentToolName: {
                                             let functionTool = this.fetchToolObjByName(part.functionCall.name);
-                                            let functionResponseText = await functionTool.run({
+                                            let { userReply, focusedAgentName, focusedAgent, updatedProfile, endFocus } = await functionTool.run({
                                                 args: part.functionCall.args,
-                                                aliveAgents: 
+                                                aliveAgents: this.aliveAgents,
                                             });
+                                            // If focussed agent is not present in alive agents, then add to alive agents
+                                            if (focusedAgent) {
+                                                let focussedAgentObj = this.getFocussedAgentObject();
+                                                if (!focussedAgentObj) {
+                                                    this.aliveAgents.push({
+                                                        name: focusedAgentName,
+                                                        agent: focusedAgent,
+                                                    });
+                                                }
+                                                this.focusedAgent = focusedAgentName;
+                                            }
+                                            if (updatedProfile) {
+                                                this.currentState.profile = updatedProfile;
+                                            }
+                                            if (endFocus) {
+                                                this.focusedAgent = null;
+                                            }
+                                            return {
+                                                messages: [userReply],
+                                            }
                                             break;
                                         }
                                     }
