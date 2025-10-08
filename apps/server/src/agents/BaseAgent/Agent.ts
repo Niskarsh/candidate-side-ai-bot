@@ -1,4 +1,4 @@
-import { Candidate, FunctionDeclaration, GenerateContentResponse } from "@google/genai";
+import { Candidate, Content, FunctionDeclaration, GenerateContentResponse } from "@google/genai";
 import { geminiGenAI } from "../../services/gemini";
 import { loadToolClasses } from "./utils/tool-loader";
 
@@ -14,7 +14,7 @@ export class Agent {
   name: string;
   description: string;
   systemPrompt: string;
-  history: Array<{ role: "user" | "model"; content: string }> = [];
+  history: Array<{ role: "user" | "model"; content: string } | Content> = [];
   toolsAvailable: any[] = [];
   // schemasAvailable: Array<any> = [];
   WELCOME_MESSAGE = "";

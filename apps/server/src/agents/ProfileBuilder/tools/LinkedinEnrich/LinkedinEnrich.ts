@@ -13,7 +13,7 @@ export class LinkedinEnrich extends Tool {
         const { linkedin_url } = args;
         // const result = await enrichLinkedIn(String(linkedin_url));
         const result = dummyLinkedinData;
-        console.log(result);
+        // console.log(result);
         return result;
     };
 }

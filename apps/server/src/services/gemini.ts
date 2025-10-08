@@ -1,4 +1,4 @@
-import { GoogleGenAI, FunctionDeclaration, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, FunctionDeclaration, GenerateContentResponse, Content } from "@google/genai";
 // import * as dotenv from "dotenv";
 // dotenv.config();
 /**
@@ -21,17 +21,23 @@ export async function geminiGenAI({
 }: {
   model: string;
   // contents: Array<{ role: "user" | "model" | "tool"; parts: Array<{ text?: string; functionCall?: { name: string; arguments: any }; functionResponse?: { name: string; response: any } }> }>;
-  messages: Array<{ role: "user" | "model"; content: string }>;
+  messages: Array<{ role: "user" | "model"; content: string } | Content>;
   system_instruction: string;
   config?: { [key: string]: any; };
   tools?: any[];
 }): Promise<GenerateContentResponse> {
   if (!model) throw new Error("No model specified");
   if (!system_instruction) throw new Error("No system_instruction specified");
-  let contents = messages.map(m => ({
-    role: m.role,
-    parts: [{ text: m.content }],
-  }))
+  let contents = messages.map(m => {
+    if ("parts" in m) {
+      return m; // If m is of type Content, return it as is
+    }
+    return {
+      role: m.role,
+      // @ts-expect-error Property 'content' does not exist on type '{ role: "model" | "user"; content: string; } | Content'.
+      parts: [{ text: m.content }],
+    };
+  });
   let configObj = { ...config };
   if (tools && tools.length > 0) {
     let toolsDec: FunctionDeclaration[] = tools.map(tool => tool.toFunctionDeclaration());

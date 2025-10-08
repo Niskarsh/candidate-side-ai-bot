@@ -4,6 +4,8 @@ import { Agent } from "../BaseAgent/Agent";
 import { name, description, systemPrompt } from "./AgentDetails";
 import { Candidate } from "@google/genai";
 import { name as ProfileBuilderLinkedinEnrichToolName } from './tools/LinkedinEnrich/ToolDetails';
+import { geminiGenAI } from "../../services/gemini";
+import { LinkedInProfileSchema } from "./Schemas";
 export class ProfileBuilder extends Agent {
     currentState: {
         profile: {
@@ -79,8 +81,27 @@ export class ProfileBuilder extends Agent {
                                     switch (part.functionCall.name) {
                                         case ProfileBuilderLinkedinEnrichToolName: {
                                             let functionTool = this.fetchToolObjByName(part.functionCall.name);
-                                            let functionResponseText = await functionTool.run({ args: part.functionCall.args });
-                                            // console.log('Function call response:', functionResponseText);
+                                            let linkedInData = await functionTool.run({ args: part.functionCall.args });
+                                            this.history.push(candidate.content)
+                                            // Create a function response part
+                                            const function_response_part = {
+                                                name: ProfileBuilderLinkedinEnrichToolName,
+                                                response: { result: linkedInData }
+                                            }
+                                            this.history.push({ role: 'user', parts: [{ functionResponse: function_response_part }] });
+                                            let updatedSystemPrompt = this.systemPrompt.replace("{{Current-State}}", JSON.stringify(this.currentState.profile || {}));
+                                            const postToolCall = await geminiGenAI({
+                                                // model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
+                                                model: 'gemini-2.0-flash',
+                                                messages: this.history,
+                                                system_instruction: updatedSystemPrompt,
+                                                tools: this.toolsAvailable,
+                                                config: {
+                                                    responseMimeType: "application/json",
+                                                    responseSchema: LinkedInProfileSchema,
+                                                },
+                                            });
+                                            console.log('POST^^^^^^^^^^^^^^^:', JSON.stringify(postToolCall));
                                             // responseText += functionResponseText;
                                             break;
                                         }
