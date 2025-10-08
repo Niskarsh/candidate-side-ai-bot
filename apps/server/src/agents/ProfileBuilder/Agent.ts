@@ -2,6 +2,8 @@ import path from "path";
 import { fileURLToPath } from "node:url";
 import { Agent } from "../BaseAgent/Agent";
 import { name, description, systemPrompt } from "./AgentDetails";
+import { Candidate } from "@google/genai";
+import { name as ProfileBuilderLinkedinEnrichToolName } from './tools/LinkedinEnrich/ToolDetails';
 export class ProfileBuilder extends Agent {
     currentState: {
         profile: {
@@ -61,12 +63,36 @@ export class ProfileBuilder extends Agent {
 
     async step(message: string) {
         // this.absorbMessage(message);
-        console.log('Orchestrator stepping with message:', message);
-        const resp = await this.run({ userMessage: message });
-        // console.log('history', this.history, 'resp', resp.candidates[0]);
-        return {
-            messages: [resp],
-            // messages: [],
+        // console.log('ProfileBuilder stepping with message:', message);
+        const response = await this.run({ userMessage: message, priorProfile: this.currentState.profile });
+        console.log('ProfileBuilder run response:', JSON.stringify(response));
+        let responseText = '';
+        if (response.candidates) {
+            await Promise.all(response.candidates.map(async (candidate: Candidate) => {
+                if (candidate.content) {
+                    if (candidate.content?.parts) {
+                        for (const part of candidate.content?.parts) {
+                            if (part.text) {
+                                responseText += part.text;
+                            } else if (part.functionCall) {
+                                if (part.functionCall.name) {
+                                    switch (part.functionCall.name) {
+                                        case ProfileBuilderLinkedinEnrichToolName: {
+                                            let functionTool = this.fetchToolObjByName(part.functionCall.name);
+                                            let functionResponseText = await functionTool.run({ args: part.functionCall.args });
+                                            // console.log('Function call response:', functionResponseText);
+                                            // responseText += functionResponseText;
+                                            break;
+                                        }
+                                    }
+
+                                }
+                            }
+                        }
+                    }
+                }
+            }));
         }
+        return { userReply: '', updatedProfile: {}, endFocus: false }
     }
 }

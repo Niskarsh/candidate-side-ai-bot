@@ -1,13 +1,13 @@
 import axios from 'axios';
 
-export const name = `linkedin_enrich`;
-export const description = `Fetch and normalize a candidate profile from a LinkedIn public URL.`;
+export const name = `ikigai`;
+export const description = `Runs ikigai exercise to help user find their purpose.`;
 export const parameters = {
     type: "OBJECT",
     properties: {
-        linkedin_url: { type: "STRING", description: "Public LinkedIn profile URL" }
+        ikagai: { type: "STRING", description: "Will fill ikigai test here" }
     },
-    required: ["linkedin_url"]
+    required: ["ikagai"]
 };
 
 

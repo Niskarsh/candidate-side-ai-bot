@@ -27,7 +27,7 @@ export class Orchestrator extends Agent {
         ikigaiCollected: boolean;
     };
     focusedAgent: string | null;
-    aliveAgents: any[];
+    aliveAgents: { name: string, agent: any }[];
 
     constructor() {
         // @ts-expect-error The 'import.meta' meta-property is only allowed
@@ -88,6 +88,23 @@ export class Orchestrator extends Agent {
         }
         return null;
     }
+
+    getPassedAgentFromAliveAgents(agentName: string) {
+        if (this.aliveAgents) {
+            return this.aliveAgents.find(agent => agent.name === agentName);
+        }
+        return null;
+    }
+
+    addAgentToAliveAgents({agentName, agentObj}: {agentName: string, agentObj: any}) {
+        if (this.aliveAgents) {
+            this.aliveAgents.push({
+                name: agentName,
+                agent: agentObj,
+            });
+        }
+    }
+
     async step(message: string) {
 
         // If focussed agent is set, and alive, delegate to it directly
@@ -95,7 +112,7 @@ export class Orchestrator extends Agent {
             console.log('Delegating to focussed agent:', this.focusedAgent);
             let focussedAgent = this.getFocussedAgentObject();
             if (focussedAgent) {
-                let { userReply, updatedProfile, endFocus } = await focussedAgent.step(message);
+                let { userReply, updatedProfile, endFocus } = await focussedAgent.agent.step(message);
                 this.currentState.profile = updatedProfile;
                 if (endFocus) {
                     this.focusedAgent = null;
@@ -139,7 +156,7 @@ export class Orchestrator extends Agent {
                                             let functionTool = this.fetchToolObjByName(part.functionCall.name);
                                             let { userReply, focusedAgentName, focusedAgent, updatedProfile, endFocus } = await functionTool.run({
                                                 args: part.functionCall.args,
-                                                aliveAgents: this.aliveAgents,
+                                                orchestratorThread: this,
                                             });
                                             // If focussed agent is not present in alive agents, then add to alive agents
                                             if (focusedAgent) {
