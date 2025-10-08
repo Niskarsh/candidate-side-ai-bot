@@ -69,10 +69,12 @@ export class Agent {
   async run({
     userMessage,
     priorProfile,
+    isLinkedinDataPulled,
     subAgents,
   }: {
     userMessage: string;
     priorProfile?: any;
+    isLinkedinDataPulled?: boolean;
     subAgents?: {
       name: string;
       description: string;
@@ -86,6 +88,9 @@ export class Agent {
     this.history.push({ role: "user", content: userMessage });
     let updatedSystemPrompt = this.systemPrompt.replace("{{Current-State}}", JSON.stringify(priorProfile || {}));
     updatedSystemPrompt = updatedSystemPrompt.replace("{{Sub-Agents}}", JSON.stringify(subAgents || {}));
+    if (isLinkedinDataPulled !== undefined) {
+      updatedSystemPrompt = updatedSystemPrompt.replace("{{Linkedin-Data-Pulled}}", String(isLinkedinDataPulled));
+    }
     console.log('Updated system prompt:', updatedSystemPrompt);
     const response = await geminiGenAI({
       // model: process.env.GEMINI_MODEL || "gemini-1.5-flash",

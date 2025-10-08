@@ -21,8 +21,14 @@ export class Orchestrator extends Agent {
                 details: Record<string, any>[],
                 complete: boolean;
             },
-            interests: string[];
-            summary: string | null;
+            interests: {
+                details: string[],
+                complete: boolean;
+            },
+            summary: {
+                details: string | null,
+                complete: boolean;
+            },
         };
         ikigaiCollected: boolean;
     };
@@ -60,8 +66,14 @@ export class Orchestrator extends Agent {
                     details: [],
                     complete: false,
                 },
-                interests: [],
-                summary: null,
+                interests: {
+                    details: [],
+                    complete: false,
+                },
+                summary: {
+                    details: null,
+                    complete: false,
+                },
             },
             ikigaiCollected: false,
         };
@@ -96,7 +108,7 @@ export class Orchestrator extends Agent {
         return null;
     }
 
-    addAgentToAliveAgents({agentName, agentObj}: {agentName: string, agentObj: any}) {
+    addAgentToAliveAgents({ agentName, agentObj }: { agentName: string, agentObj: any }) {
         if (this.aliveAgents) {
             this.aliveAgents.push({
                 name: agentName,
@@ -135,63 +147,56 @@ export class Orchestrator extends Agent {
         });
         console.log('Orchestrator run response:', JSON.stringify(response));
         let responseText = '';
-        if (response.candidates) {
-            await Promise.all(response.candidates.map(async (candidate: Candidate) => {
-                if (candidate.content) {
-                    if (candidate.content?.parts) {
-                        for (const part of candidate.content?.parts) {
-                            if (part.text) {
-                                responseText += part.text;
-                            } else if (part.functionCall) {
-                                if (part.functionCall.name) {
-                                    switch (part.functionCall.name) {
-                                        case OrchestratorReplyToUserToolName: {
-                                            let functionTool = this.fetchToolObjByName(part.functionCall.name);
-                                            let functionResponseText = await functionTool.run({ args: part.functionCall.args });
-                                            // console.log('Function call response:', functionResponseText);
-                                            responseText += functionResponseText;
-                                            break;
-                                        }
-                                        case OrchestratorDelagateToSubAgentToolName: {
-                                            let functionTool = this.fetchToolObjByName(part.functionCall.name);
-                                            let { userReply, focusedAgentName, focusedAgent, updatedProfile, endFocus } = await functionTool.run({
-                                                args: part.functionCall.args,
-                                                orchestratorThread: this,
-                                            });
-                                            // If focussed agent is not present in alive agents, then add to alive agents
-                                            if (focusedAgent) {
-                                                let focussedAgentObj = this.getFocussedAgentObject();
-                                                if (!focussedAgentObj) {
-                                                    this.aliveAgents.push({
-                                                        name: focusedAgentName,
-                                                        agent: focusedAgent,
-                                                    });
-                                                }
-                                                this.focusedAgent = focusedAgentName;
-                                            }
-                                            if (updatedProfile) {
-                                                this.currentState.profile = updatedProfile;
-                                            }
-                                            if (endFocus) {
-                                                this.focusedAgent = null;
-                                            }
-                                            return {
-                                                messages: [userReply],
-                                            }
-                                            break;
-                                        }
-                                    }
+        let functionCall = response.candidates[0].content?.parts[0].functionCall;
+        if (functionCall) {
 
+            if (response.candidates) {
+                if (functionCall.name) {
+                    switch (functionCall.name) {
+                        case OrchestratorReplyToUserToolName: {
+                            let functionTool = this.fetchToolObjByName(functionCall.name);
+                            let functionResponseText = await functionTool.run({ args: functionCall.args });
+                            // console.log('Function call response:', functionResponseText);
+                            responseText += functionResponseText;
+                            break;
+                        }
+                        case OrchestratorDelagateToSubAgentToolName: {
+                            let functionTool = this.fetchToolObjByName(functionCall.name);
+                            let { userReply, focusedAgentName, focusedAgent, updatedProfile, endFocus } = await functionTool.run({
+                                args: functionCall.args,
+                                orchestratorThread: this,
+                            });
+                            console.log('Delegation function call response:', userReply, focusedAgentName, focusedAgent, updatedProfile, endFocus);
+                            // If focussed agent is not present in alive agents, then add to alive agents
+                            if (focusedAgent) {
+                                let focussedAgentObj = this.getFocussedAgentObject();
+                                if (!focussedAgentObj) {
+                                    this.aliveAgents.push({
+                                        name: focusedAgentName,
+                                        agent: focusedAgent,
+                                    });
                                 }
+                                this.focusedAgent = focusedAgentName;
                             }
+                            if (updatedProfile) {
+                                this.currentState.profile = updatedProfile;
+                            }
+                            if (endFocus) {
+                                this.focusedAgent = null;
+                            }
+                            return {
+                                messages: [userReply],
+                            }
+                            break;
                         }
                     }
-                }
-            }));
-        }
-        this.history.push({ role: "model", content: responseText });
 
-        console.log('history', this.history, 'resp', responseText);
+                }
+            }
+        }
+        // this.history.push({ role: "model", content: responseText });
+
+        // console.log('history', this.history, 'resp', responseText);
         return {
             messages: [responseText],
             // messages: [],

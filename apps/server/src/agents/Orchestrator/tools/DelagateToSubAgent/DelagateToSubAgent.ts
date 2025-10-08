@@ -38,6 +38,7 @@ export class DelagateToSubAgent extends Tool {
             updatedProfile,
             endFocus,
         } = await agent.agent.step(args.detailedInput);
+        console.log('###################', userReply)
         return { userReply,
             focusedAgentName: args.agentName,
             focusedAgent: agent.agent,
