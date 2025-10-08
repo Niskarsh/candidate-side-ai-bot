@@ -7,7 +7,7 @@ export const IkigaiQuestionReturnSchema = {
   properties: {
     userReply: {
       type: Type.OBJECT,
-      description: "Present only after the user answers. Null when asking the question.",
+      description: "Present only when you need to ask user something beyond the quntions, or user asks something beyond the exercise.",
       properties: {
         most: { type: Type.INTEGER, description: "Index 1-4 for 'Most like me'." },
         least: { type: Type.INTEGER, description: "Index 1-4 for 'Least like me'." }

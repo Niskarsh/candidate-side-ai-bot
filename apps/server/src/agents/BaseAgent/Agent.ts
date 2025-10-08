@@ -93,9 +93,16 @@ export class Agent {
       questions: {
         question: string,
         options: string[],
-        answer: string
+        answer: string,
+        order: number,
       }[]
-      questionsDone: number,
+      progress: {
+        token: string,
+        progress: string,
+        stage: string,
+        block: number
+      },
+      // questionsDone: number,
     }
   }) {
     this.history.push({ role: "user", content: userMessage });

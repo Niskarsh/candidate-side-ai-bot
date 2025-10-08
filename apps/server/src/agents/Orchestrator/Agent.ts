@@ -92,7 +92,7 @@ export class Orchestrator extends Agent {
         await profileBuilder.initTools();
         await ikigai.initTools();
         const subAgentList = [
-            // profileBuilder.agentDetails(),
+            profileBuilder.agentDetails(),
             ikigai.agentDetails(),
         ];
         return subAgentList;
