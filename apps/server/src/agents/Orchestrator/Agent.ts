@@ -7,31 +7,34 @@ import { ProfileBuilder } from "../ProfileBuilder/Agent";
 import { name as OrchestratorReplyToUserToolName } from './tools/ReplyToUser/ToolDetails';
 import { name as OrchestratorDelagateToSubAgentToolName } from './tools/DelagateToSubAgent/ToolDetails';
 export class Orchestrator extends Agent {
-    currentState: {
-        profile: {
-            workExperience: {
-                details: Record<string, any>[],
-                complete: boolean;
-            },
-            skills: {
-                details: string[],
-                complete: boolean;
-            },
-            education: {
-                details: Record<string, any>[],
-                complete: boolean;
-            },
-            interests: {
-                details: string[],
-                complete: boolean;
-            },
-            summary: {
-                details: string | null,
-                complete: boolean;
-            },
-        };
-        ikigaiCollected: boolean;
+    profile: {
+        workExperience: {
+            details: Record<string, any>[],
+            complete: boolean;
+        },
+        skills: {
+            details: string[],
+            complete: boolean;
+        },
+        education: {
+            details: Record<string, any>[],
+            complete: boolean;
+        },
+        interests: {
+            details: string[],
+            complete: boolean;
+        },
+        summary: {
+            details: string | null,
+            complete: boolean;
+        },
     };
+    // currentState: {
+    //     ikigaiCollected: boolean;
+    // };
+    // ikigai: {
+
+    // }
     focusedAgent: string | null;
     aliveAgents: { name: string, agent: any }[];
 
@@ -52,30 +55,27 @@ export class Orchestrator extends Agent {
             'Hello! I am your Orchestrator agent, here to assist you with various tasks. How can I help you today?',
             toolsDir, // toolsDir
         );
-        this.currentState = {
-            profile: {
-                workExperience: {
-                    details: [],
-                    complete: false,
-                },
-                skills: {
-                    details: [],
-                    complete: false,
-                },
-                education: {
-                    details: [],
-                    complete: false,
-                },
-                interests: {
-                    details: [],
-                    complete: false,
-                },
-                summary: {
-                    details: null,
-                    complete: false,
-                },
+        this.profile = {
+            workExperience: {
+                details: [],
+                complete: false,
             },
-            ikigaiCollected: false,
+            skills: {
+                details: [],
+                complete: false,
+            },
+            education: {
+                details: [],
+                complete: false,
+            },
+            interests: {
+                details: [],
+                complete: false,
+            },
+            summary: {
+                details: null,
+                complete: false,
+            },
         };
         this.focusedAgent = null;
         this.aliveAgents = [];
@@ -120,29 +120,29 @@ export class Orchestrator extends Agent {
     async step(message: string) {
 
         // If focussed agent is set, and alive, delegate to it directly
-        if (this.focusedAgent) {
-            console.log('Delegating to focussed agent:', this.focusedAgent);
-            let focussedAgent = this.getFocussedAgentObject();
-            if (focussedAgent) {
-                let { userReply, updatedProfile, endFocus } = await focussedAgent.agent.step(message);
-                this.currentState.profile = updatedProfile;
-                if (endFocus) {
-                    this.focusedAgent = null;
-                }
-                // this.history.push({ role: "model", content: userReply });
-                return {
-                    messages: [userReply],
-                    // messages: [],
-                }
-            }
-            throw new Error("Focussed agent delegation not implemented yet.");
-        }
+        // if (this.focusedAgent) {
+        //     console.log('Delegating to focussed agent:', this.focusedAgent);
+        //     let focussedAgent = this.getFocussedAgentObject();
+        //     if (focussedAgent) {
+        //         let { userReply, updatedProfile, endFocus } = await focussedAgent.agent.step(message);
+        //         this.profile = updatedProfile;
+        //         if (endFocus) {
+        //             this.focusedAgent = null;
+        //         }
+        //         // this.history.push({ role: "model", content: userReply });
+        //         return {
+        //             messages: [userReply],
+        //             // messages: [],
+        //         }
+        //     }
+        //     throw new Error("Focussed agent delegation not implemented yet.");
+        // }
 
         console.log('Orchestrator stepping with message:', message);
         let subAgentList = await this.getSubAgentList();
         const response = await this.run({
             userMessage: message,
-            priorProfile: this.currentState.profile,
+            priorProfile: this.profile,
             subAgents: subAgentList,
         });
         console.log('Orchestrator run response:', JSON.stringify(response));
@@ -179,7 +179,7 @@ export class Orchestrator extends Agent {
                                 this.focusedAgent = focusedAgentName;
                             }
                             if (updatedProfile) {
-                                this.currentState.profile = updatedProfile;
+                                this.profile = updatedProfile;
                             }
                             if (endFocus) {
                                 this.focusedAgent = null;

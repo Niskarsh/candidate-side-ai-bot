@@ -7,7 +7,7 @@ export const chatRouter = Router();
 
 chatRouter.get("/hello", (_req, res) => {
   const messages = orchestrator.getWelcome();
-  res.json({ messages, profilePreview: orchestrator.currentState.profile, focusedAgent: orchestrator.currentState.focusedAgent });
+  res.json({ messages, profilePreview: orchestrator.profile, focusedAgent: orchestrator.focusedAgent });
 });
 
 chatRouter.post("/", async (req, res) => {
@@ -23,8 +23,8 @@ chatRouter.post("/", async (req, res) => {
     const turn = await orchestrator.step(message);
     res.json({
       messages: turn.messages,
-      profilePreview: orchestrator.currentState.profile,
-      focusedAgent: orchestrator.currentState.focusedAgent
+      profilePreview: orchestrator.profile,
+      focusedAgent: orchestrator.focusedAgent
     });
   } catch (e: any) {
     console.error("[ORCH ERROR]", e);
