@@ -4,6 +4,8 @@ import { Agent } from "../BaseAgent/Agent";
 import { name, description, systemPrompt } from "./AgentDetails";
 import { Candidate } from "@google/genai";
 import { ProfileBuilder } from "../ProfileBuilder/Agent";
+import { name as OrchestratorReplyToUserToolName } from './tools/ReplyToUser/ToolDetails';
+import { name as OrchestratorDelagateToSubAgentToolName } from './tools/DelagateToSubAgent/ToolDetails';
 export class Orchestrator extends Agent {
     currentState: {
         profile: {
@@ -23,9 +25,9 @@ export class Orchestrator extends Agent {
             summary: string | null;
         };
         ikigaiCollected: boolean;
-        focusedAgent: string | null;
-        aliveAgents?: any[];
     };
+    focusedAgent: string | null;
+    aliveAgents?: any[];
 
     constructor() {
         // @ts-expect-error The 'import.meta' meta-property is only allowed
@@ -62,8 +64,8 @@ export class Orchestrator extends Agent {
                 summary: null,
             },
             ikigaiCollected: false,
-            focusedAgent: null,
         };
+        this.focusedAgent = null;
         if (this.WELCOME_MESSAGE) {
             this.history.push({ role: "model", content: this.WELCOME_MESSAGE });
         }
@@ -78,8 +80,34 @@ export class Orchestrator extends Agent {
         ];
         return subAgentList;
     }
+
+    getFocussedAgentObject() {
+        if (this.focusedAgent && this.aliveAgents) {
+            return this.aliveAgents.find(agent => agent.name === this.focusedAgent);
+        }
+        return null;
+    }
     async step(message: string) {
-        // this.absorbMessage(message);
+
+        // If focussed agent is set, and alive, delegate to it directly
+        if (this.focusedAgent) {
+            console.log('Delegating to focussed agent:', this.focusedAgent);
+            let focussedAgent = this.getFocussedAgentObject();
+            if (focussedAgent) {
+                let { userReply, updatedProfile, endFocus } = await focussedAgent.step(message);
+                this.currentState.profile = updatedProfile;
+                if (endFocus) {
+                    this.focusedAgent = null;
+                }
+                // this.history.push({ role: "model", content: userReply });
+                return {
+                    messages: [userReply],
+                    // messages: [],
+                }
+            }
+            throw new Error("Focussed agent delegation not implemented yet.");
+        }
+
         console.log('Orchestrator stepping with message:', message);
         let subAgentList = await this.getSubAgentList();
         const response = await this.run({
@@ -98,10 +126,24 @@ export class Orchestrator extends Agent {
                                 responseText += part.text;
                             } else if (part.functionCall) {
                                 if (part.functionCall.name) {
-                                    let functionTool = this.fetchToolObjByName(part.functionCall.name);
-                                    let functionResponseText = await functionTool.run(part.functionCall.args);
-                                    // console.log('Function call response:', functionResponseText);
-                                    responseText += functionResponseText;
+                                    switch (part.functionCall.name) {
+                                        case OrchestratorReplyToUserToolName: {
+                                            let functionTool = this.fetchToolObjByName(part.functionCall.name);
+                                            let functionResponseText = await functionTool.run({ args: part.functionCall.args });
+                                            // console.log('Function call response:', functionResponseText);
+                                            responseText += functionResponseText;
+                                            break;
+                                        }
+                                        case OrchestratorDelagateToSubAgentToolName: {
+                                            let functionTool = this.fetchToolObjByName(part.functionCall.name);
+                                            let functionResponseText = await functionTool.run({
+                                                args: part.functionCall.args,
+                                                aliveAgents: 
+                                            });
+                                            break;
+                                        }
+                                    }
+
                                 }
                             }
                         }

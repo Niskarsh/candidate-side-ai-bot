@@ -8,7 +8,7 @@ export class ReplyToUser extends Tool {
             parameters
         );
     }
-    async run(args: any): Promise<string> {
+    async run({ args }: { args: any}): Promise<string> {
         let text = args.text;
         return new Promise((resolve) => resolve(text)); // simulate delay
     };

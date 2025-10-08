@@ -8,10 +8,9 @@ export class DelagateToSubAgent extends Tool {
             parameters
         );
     }
-    // async run(args: any) {
-    //     // const result = await enrichLinkedIn(String(this.linkedinUrl));
-    //     // return result;
-    //     throw new Error("Method not implemented.");
-    //     return;
-    // };
+    async run(args: any) {
+        
+        throw new Error("Method not implemented.");
+        return;
+    };
 }
