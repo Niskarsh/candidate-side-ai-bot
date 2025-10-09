@@ -202,6 +202,7 @@ export class Orchestrator extends Agent {
                                 args: functionCall.args,
                                 orchestratorThread: this,
                             });
+                            console.log('%%%%%%%%%%%%%%%%', this.userReply)
                             // console.log('Delegation function call response:', userReply, focusedAgentName, focusedAgent, updatedProfile, endFocus);
                             // If focussed agent is not present in alive agents, then add to alive agents
                             if (focusedAgent) {
@@ -225,8 +226,7 @@ export class Orchestrator extends Agent {
             this.absorbMessage(this.userReply, 'model');
         }
         return {
-            messages: [responseText],
-            // messages: [],
+            messages: [this.userReply],
         }
     }
 }

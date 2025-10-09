@@ -50,3 +50,21 @@ export const IkigaiQuestionReturnSchema = {
   additionalProperties: false
 };
 
+
+export const IkigaiReturnSchema = {
+    type: Type.OBJECT,
+    properties: {
+        // updatedProfile: LinkedInProfileSchema,
+        userReply: {
+            type: Type.STRING,
+            description: `
+            This is how you with ask questions to user for ikigai exercise or
+            Anythings to convey or pass to user, Orchestrator will relay this to user. Since this is the only way Ikigai agent can communicate with user. This cannot be empty.
+            `
+        },
+        endFocus: { type: Type.BOOLEAN, description: "True if all jobs for Ikigai Sub agent is done" }
+    },
+    required: [
+      // "updatedProfile", 
+      "userReply", "endFocus"]
+};

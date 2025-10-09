@@ -128,10 +128,10 @@ export const ProfileBuilderReturnSchema = {
         userReply: {
             type: Type.STRING,
             description: `
-            Pass to orchestrator about any gaps in the linkedin profile data, if its all complete, say profile is complete and prompt to do Ikigai exercise. Orchestrator will relay this to user. Since this is the only way ProfileBuilder agent can communicate with user. This cannot be empty.
+            Pass to orchestrator about any gaps in the linkedin profile data, if its all complete, subtly prompt to do Ikigai exercise so Ikigai subagent can take over, your job is done at this point. Orchestrator will relay this to user. Since this is the only way ProfileBuilder agent can communicate with user. This cannot be empty.
             `
         },
-        endFocus: { type: Type.BOOLEAN, description: "True if profile is sufficiently complete and ProfileBuilder agent has done all its jobs, that is Complete Profile and Ikigai exercise" }
+        endFocus: { type: Type.BOOLEAN, description: "True if profile is sufficiently complete and ProfileBuilder agent has done all its jobs, that is Complete Profile" }
     },
     required: ["updatedProfile", "userReply", "endFocus"]
 };

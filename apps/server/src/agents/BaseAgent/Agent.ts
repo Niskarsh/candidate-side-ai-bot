@@ -110,8 +110,13 @@ export class Agent {
     if (absorbMessage !== undefined && absorbMessage === true) {
       this.absorbMessage(userMessage);
     }
-    let updatedSystemPrompt = this.systemPrompt.replace("{{Current-State}}", JSON.stringify(priorProfile || {}));
-    updatedSystemPrompt = updatedSystemPrompt.replace("{{Sub-Agents}}", JSON.stringify(subAgents || {}));
+    let updatedSystemPrompt = this.systemPrompt
+    if (priorProfile !== undefined) {
+      updatedSystemPrompt = updatedSystemPrompt.replace("{{Current-State}}", JSON.stringify(priorProfile || {}));
+    }
+    if (subAgents !== undefined) {
+      updatedSystemPrompt = updatedSystemPrompt.replace("{{Sub-Agents}}", JSON.stringify(subAgents || {}));
+    }
     if (isLinkedinDataPulled !== undefined) {
       updatedSystemPrompt = updatedSystemPrompt.replace("{{Linkedin-Data-Pulled}}", String(isLinkedinDataPulled));
     }

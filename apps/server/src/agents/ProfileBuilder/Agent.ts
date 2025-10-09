@@ -11,29 +11,6 @@ import { LinkedInProfileSchema, ProfileBuilderReturnSchema } from "./Schemas";
 import { Orchestrator } from "../Orchestrator/Agent";
 export class ProfileBuilder extends Agent {
     currentState: {
-        profile: {
-            workExperience: {
-                details: Record<string, any>[],
-                complete: boolean;
-            },
-            skills: {
-                details: string[],
-                complete: boolean;
-            },
-            education: {
-                details: Record<string, any>[],
-                complete: boolean;
-            },
-            interests: {
-                details: string[],
-                complete: boolean;
-            },
-            summary: {
-                details: string | null,
-                complete: boolean;
-            },
-            complete: boolean;
-        };
         linkedinDataPulled: boolean;
     };
 
@@ -48,29 +25,6 @@ export class ProfileBuilder extends Agent {
             name, description, systemPrompt, [], '', toolsDir
         );
         this.currentState = {
-            profile: {
-                workExperience: {
-                    details: [],
-                    complete: false,
-                },
-                skills: {
-                    details: [],
-                    complete: false,
-                },
-                education: {
-                    details: [],
-                    complete: false,
-                },
-                interests: {
-                    details: [],
-                    complete: false,
-                },
-                summary: {
-                    details: null,
-                    complete: false,
-                },
-                complete: false,
-            },
             linkedinDataPulled: false,
         };
         if (this.WELCOME_MESSAGE) {
@@ -81,7 +35,7 @@ export class ProfileBuilder extends Agent {
     async step(message: string, orchestratorThread: Orchestrator) {
         // this.absorbMessage(message);
         console.log('ProfileBuilder stepping with message:', message);
-        const response = await this.run({ userMessage: message, priorProfile: this.currentState.profile, isLinkedinDataPulled: this.currentState.linkedinDataPulled });
+        const response = await this.run({ userMessage: message, priorProfile: orchestratorThread.profile, isLinkedinDataPulled: this.currentState.linkedinDataPulled });
         console.log('ProfileBuilder run response:', JSON.stringify(response));
         let responseText = '';
         let functionCall = response.candidates[0].content?.parts?.find((part: any) => part.functionCall)?.functionCall;
@@ -99,7 +53,7 @@ export class ProfileBuilder extends Agent {
                             response: { result: linkedInData }
                         }
                         this.history.push({ role: 'user', parts: [{ functionResponse: function_response_part }] });
-                        let updatedSystemPrompt = this.systemPrompt.replace("{{Current-State}}", JSON.stringify(this.currentState.profile || {}));
+                        let updatedSystemPrompt = this.systemPrompt.replace("{{Current-State}}", JSON.stringify(orchestratorThread.profile || {}));
                         const postToolCall = await geminiGenAI({
                             // model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
                             model: 'gemini-2.0-flash',
@@ -115,7 +69,6 @@ export class ProfileBuilder extends Agent {
                         orchestratorThread.updatestate({ profile: finalResp.updatedProfile });
                         orchestratorThread.userReply = finalResp.userReply;
                         orchestratorThread.handleEndFocus({ endFocus: finalResp.endFocus });
-                        // this.currentState.profile = finalResp.updatedProfile;
                         console.log('^^^^^^^^^^^^^^^^^^^^', finalResp.userReply, finalResp.endFocus);
                         // return {
                         //     updatedProfile: finalResp.updatedProfile,
@@ -130,11 +83,11 @@ export class ProfileBuilder extends Agent {
                         this.history.push(response.candidates[0].content)
                         // Create a function response part
                         const function_response_part = {
-                            name: ProfileBuilderLinkedinEnrichToolName,
+                            name: ProfileBuilderReplyToOrchestratorToolName,
                             response: { result: orchestratorReply }
                         }
                         this.history.push({ role: 'user', parts: [{ functionResponse: function_response_part }] });
-                        let updatedSystemPrompt = this.systemPrompt.replace("{{Current-State}}", JSON.stringify(this.currentState.profile || {}));
+                        let updatedSystemPrompt = this.systemPrompt.replace("{{Current-State}}", JSON.stringify(orchestratorThread.profile || {}));
                         const postToolCall = await geminiGenAI({
                             // model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
                             model: 'gemini-2.0-flash',
@@ -147,11 +100,9 @@ export class ProfileBuilder extends Agent {
                             },
                         });
                         let finalResp = JSON.parse(postToolCall.candidates[0].content?.parts[0].text);
-                        this.currentState.profile = finalResp.updatedProfile;
                         orchestratorThread.updatestate({ profile: finalResp.updatedProfile });
                         orchestratorThread.userReply = finalResp.userReply;
                         orchestratorThread.handleEndFocus({ endFocus: finalResp.endFocus });
-                        console.log('^^^^^^^^^^^^^^^^^^^^', finalResp.userReply, finalResp.endFocus, finalResp.updatedProfile);
                         // return {
                         //     updatedProfile: finalResp.updatedProfile,
                         //     userReply: finalResp.userReply,
@@ -162,26 +113,6 @@ export class ProfileBuilder extends Agent {
                     case ProfileBuilderUpdateProfileFromUserInputsToolName: {
                         let functionTool = this.fetchToolObjByName(functionCall.name);
                         let { text: orchestratorReply, extractedProfile } = await functionTool.run({ args: functionCall.args });
-                        // Merge extractedProfile into currentState.profile
-                        if (extractedProfile) {
-                            for (let key of Object.keys(extractedProfile)) {
-                                if (this.currentState.profile.hasOwnProperty(key)) {
-                                    // @ts-ignore
-                                    if (typeof this.currentState.profile[key].details === 'object' && !Array.isArray(this.currentState.profile[key].details)) {
-                                        // @ts-ignore
-                                        this.currentState.profile[key].details = { ...this.currentState.profile[key].details, ...extractedProfile[key] };
-                                    } else {
-                                        // @ts-ignore
-                                        this.currentState.profile[key].details = extractedProfile[key];
-                                    }
-                                    // @ts-ignore
-                                    if (extractedProfile[key] && (Array.isArray(extractedProfile[key]) || typeof extractedProfile[key] === 'string')) {
-                                        // @ts-ignore
-                                        this.currentState.profile[key].complete = true;
-                                    }
-                                }
-                            }
-                        }
                         this.history.push(response.candidates[0].content)
                         // Create a function response part
                         const function_response_part = {
@@ -189,7 +120,7 @@ export class ProfileBuilder extends Agent {
                             response: { result: { text: orchestratorReply, extractedProfile } }
                         }
                         this.history.push({ role: 'user', parts: [{ functionResponse: function_response_part }] });
-                        let updatedSystemPrompt = this.systemPrompt.replace("{{Current-State}}", JSON.stringify(this.currentState.profile || {}));
+                        let updatedSystemPrompt = this.systemPrompt.replace("{{Current-State}}", JSON.stringify(orchestratorThread.profile || {}));
                         const postToolCall = await geminiGenAI({
                             // model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
                             model: 'gemini-2.0-flash',
@@ -202,8 +133,6 @@ export class ProfileBuilder extends Agent {
                             },
                         });
                         let finalResp = JSON.parse(postToolCall.candidates[0].content?.parts[0].text);
-                        this.currentState.profile = finalResp.updatedProfile;
-                        console.log('^^^^^^^^^^^^^^^^^^^^', finalResp.userReply, finalResp.endFocus);
                         orchestratorThread.updatestate({ profile: finalResp.updatedProfile });
                         orchestratorThread.userReply = finalResp.userReply;
                         orchestratorThread.handleEndFocus({ endFocus: finalResp.endFocus });
