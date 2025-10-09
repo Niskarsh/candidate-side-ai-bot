@@ -38,7 +38,7 @@ export class ProfileBuilder extends Agent {
         const response = await this.run({ userMessage: message, priorProfile: orchestratorThread.profile, isLinkedinDataPulled: this.currentState.linkedinDataPulled });
         console.log('ProfileBuilder run response:', JSON.stringify(response));
         let responseText = '';
-        let functionCall = response.candidates[0].content?.parts?.find((part: any) => part.functionCall)?.functionCall;
+        let functionCall = response.candidates?.[0]?.content?.parts?.find((part: any) => part.functionCall)?.functionCall;
         if (functionCall) {
             if (functionCall.name) {
                 switch (functionCall.name) {
@@ -46,7 +46,9 @@ export class ProfileBuilder extends Agent {
                         let functionTool = this.fetchToolObjByName(functionCall.name);
                         let linkedInData = await functionTool.run({ args: functionCall.args });
                         this.currentState.linkedinDataPulled = true;
-                        this.history.push(response.candidates[0].content)
+                        if (response.candidates && response.candidates[0]?.content) {
+                            this.history.push(response.candidates[0].content);
+                        }
                         // Create a function response part
                         const function_response_part = {
                             name: ProfileBuilderLinkedinEnrichToolName,
@@ -65,7 +67,7 @@ export class ProfileBuilder extends Agent {
                                 responseSchema: ProfileBuilderReturnSchema,
                             },
                         });
-                        let finalResp = JSON.parse(postToolCall.candidates[0].content?.parts[0].text);
+                        let finalResp = JSON.parse(postToolCall.candidates?.[0]?.content?.parts?.[0]?.text || '{}');
                         orchestratorThread.updatestate({ profile: finalResp.updatedProfile });
                         orchestratorThread.userReply = finalResp.userReply;
                         orchestratorThread.handleEndFocus({ endFocus: finalResp.endFocus });
@@ -80,7 +82,9 @@ export class ProfileBuilder extends Agent {
                     case ProfileBuilderReplyToOrchestratorToolName: {
                         let functionTool = this.fetchToolObjByName(functionCall.name);
                         let orchestratorReply = await functionTool.run({ args: functionCall.args });
-                        this.history.push(response.candidates[0].content)
+                        if (response.candidates?.[0]?.content) {
+                            this.history.push(response.candidates[0].content);
+                        }
                         // Create a function response part
                         const function_response_part = {
                             name: ProfileBuilderReplyToOrchestratorToolName,
@@ -99,10 +103,11 @@ export class ProfileBuilder extends Agent {
                                 responseSchema: ProfileBuilderReturnSchema,
                             },
                         });
-                        let finalResp = JSON.parse(postToolCall.candidates[0].content?.parts[0].text);
+                        let finalResp = JSON.parse(postToolCall.candidates?.[0]?.content?.parts?.[0]?.text || '{}');
                         orchestratorThread.updatestate({ profile: finalResp.updatedProfile });
                         orchestratorThread.userReply = finalResp.userReply;
                         orchestratorThread.handleEndFocus({ endFocus: finalResp.endFocus });
+                        console.log('^^^^^^^^^^^^^^^^^^^^', finalResp.userReply, finalResp.endFocus);
                         // return {
                         //     updatedProfile: finalResp.updatedProfile,
                         //     userReply: finalResp.userReply,
@@ -113,7 +118,9 @@ export class ProfileBuilder extends Agent {
                     case ProfileBuilderUpdateProfileFromUserInputsToolName: {
                         let functionTool = this.fetchToolObjByName(functionCall.name);
                         let { text: orchestratorReply, extractedProfile } = await functionTool.run({ args: functionCall.args });
-                        this.history.push(response.candidates[0].content)
+                        if (response.candidates && response.candidates[0]?.content) {
+                            this.history.push(response.candidates[0].content);
+                        }
                         // Create a function response part
                         const function_response_part = {
                             name: ProfileBuilderUpdateProfileFromUserInputsToolName,
@@ -132,6 +139,7 @@ export class ProfileBuilder extends Agent {
                                 responseSchema: ProfileBuilderReturnSchema,
                             },
                         });
+                        // @ts-expect-error postToolCall.candidates' is possibly 'undefined
                         let finalResp = JSON.parse(postToolCall.candidates[0].content?.parts[0].text);
                         orchestratorThread.updatestate({ profile: finalResp.updatedProfile });
                         orchestratorThread.userReply = finalResp.userReply;
@@ -147,6 +155,7 @@ export class ProfileBuilder extends Agent {
 
             }
         }
+        this.absorbMessage(orchestratorThread.userReply || '', 'model');
         // return { userReply: '', updatedProfile: {}, endFocus: false }
     }
 }

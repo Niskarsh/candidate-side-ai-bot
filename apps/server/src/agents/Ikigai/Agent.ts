@@ -42,9 +42,22 @@ export class Ikigai extends Agent {
         responseSchema: IkigaiReturnSchema,
       },
     });
+    console.log('+++++++++++++++++++++', this.history);
     console.log('Ikigai run response:', JSON.stringify(response));
     let responseText = '';
     let functionCall = response.candidates[0].content?.parts?.find((part: any) => part.functionCall)?.functionCall;
+    let respText = response.candidates[0].content?.parts?.find((part: any) => part.text)?.text;
+    console.log('===================', respText);
+    let parsedRespText = JSON.parse(respText || '{}');
+    console.log(parsedRespText, '===================');
+    if (parsedRespText && parsedRespText.userReply) {
+      orchestratorThread.userReply = parsedRespText.userReply;
+      orchestratorThread.absorbMessage(parsedRespText.userReply, 'model');
+      this.absorbMessage(parsedRespText.userReply, 'model');
+    }
+    if (parsedRespText && parsedRespText.endFocus !== undefined) {
+      orchestratorThread.handleEndFocus({ endFocus: parsedRespText.endFocus });
+    }
     if (functionCall) {
       if (functionCall.name) {
         switch (functionCall.name) {

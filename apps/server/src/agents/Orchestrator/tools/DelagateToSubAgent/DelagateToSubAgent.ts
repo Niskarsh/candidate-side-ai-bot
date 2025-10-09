@@ -34,6 +34,7 @@ export class DelagateToSubAgent extends Tool {
             orchestratorThread.addAgentToAliveAgents({ agentName: args.agentName, agentObj });
         }
         await agent.agent.step(args.detailedInput, orchestratorThread);
+        orchestratorThread.absorbMessage(orchestratorThread.userReply || '', 'model');
         // console.log('###################', userReply)
         return { 
             focusedAgentName: args.agentName,
