@@ -6,8 +6,8 @@ export const orchestratorTools: FunctionDeclaration[] = [
     name: "orchestrator_reply",
     description: "Speak to the user in the orchestrator's voice with a short, clear message.",
     parameters: {
-      type: "OBJECT",
-      properties: { text: { type: "STRING" } },
+      type: SchemaType.OBJECT,
+      properties: { text: { type: SchemaType.STRING } },
       required: ["text"]
     }
   },
@@ -15,8 +15,8 @@ export const orchestratorTools: FunctionDeclaration[] = [
     name: "ask_user",
     description: "Ask the user for a specific piece of information if it unblocks progress.",
     parameters: {
-      type: "OBJECT",
-      properties: { question: { type: "STRING" } },
+      type: SchemaType.OBJECT,
+      properties: { question: { type: SchemaType.STRING } },
       required: ["question"]
     }
   },
@@ -24,10 +24,10 @@ export const orchestratorTools: FunctionDeclaration[] = [
     name: "delegate",
     description: "Delegate to a known sub-agent by name, and pass a short instruction.",
     parameters: {
-      type: "OBJECT",
+      type: SchemaType.OBJECT,
       properties: {
-        agentName: { type: "STRING" },
-        briefInput: { type: "STRING", description: "Pass description from whats passed for this agent in <agent-list> section" }
+        agentName: { type: SchemaType.STRING },
+        briefInput: { type: SchemaType.STRING, description: "Pass description from whats passed for this agent in <agent-list> section" }
       },
       required: ["agentName"]
     }
@@ -35,7 +35,7 @@ export const orchestratorTools: FunctionDeclaration[] = [
   {
     name: "end_focus",
     description: "End the current delegation and resume orchestrator control.",
-    parameters: { type: "OBJECT", properties: {} }
+    parameters: { type: SchemaType.OBJECT, properties: {} }
   }
 ];
 
@@ -58,6 +58,7 @@ Conversation Guide:
 - Always favor delegation when a sub-agent is clearly better suited.
 - For delagation, dont announce with text, return that action with a function call. Always check your function declarations. We are checking tool calls result for delegation.
 
+
 You have the following sub-agents available:
 <agent-list>
 {{AGENT_REGISTRY}}
@@ -79,6 +80,7 @@ Guidelines:
 - If user refuses LinkedIn, switch to Q&A profile building (do not pester about LinkedIn again).
 - Never return silence. If unsure, ask a focused question.
 - Do not repeat the same announcement when delegation is already active.
+- - As soon as user send a linkedin profile which included linkedin.com, call the ProfileBuilderAgent immediately with the linkedin profile passed to it
 `;
 
 export async function runOrchestratorPolicy(params: {

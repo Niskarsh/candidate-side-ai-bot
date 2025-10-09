@@ -53,7 +53,10 @@ export class Orchestrator {
 
   async decideWithPolicy(message: string) {
     // convert history to model format
-    const chat = this.state.history.map(m => ({ role: m.role === "assistant" ? "model" : "user", text: m.content }));
+    const chat = this.state.history.map(m => ({ 
+      role: (m.role === "assistant" ? "model" : "user") as "user" | "model" | "tool", 
+      text: m.content 
+    }));
     const registry = listAgents(); // [{name, description}]
 
     const { text, toolCalls } = await runOrchestratorPolicy({
@@ -71,13 +74,13 @@ export class Orchestrator {
 
     const call = toolCalls[0];
     if (call.name === "orchestrator_reply") {
-      return { action: "reply", payload: { text: call.args?.text ?? text ?? "Okay." } } as const;
+      return { action: "reply", payload: { text: (call.args as any)?.text ?? text ?? "Okay." } } as const;
     }
     if (call.name === "ask_user") {
-      return { action: "ask", payload: { question: call.args?.question ?? "Could you clarify?" } } as const;
+      return { action: "ask", payload: { question: (call.args as any)?.question ?? "Could you clarify?" } } as const;
     }
     if (call.name === "delegate") {
-      return { action: "delegate", payload: { agentName: String(call.args?.agentName || ""), briefInput: String(call.args?.briefInput || "") } } as const;
+      return { action: "delegate", payload: { agentName: String((call.args as any)?.agentName || ""), briefInput: String((call.args as any)?.briefInput || "") } } as const;
     }
     if (call.name === "end_focus") {
       return { action: "end_focus", payload: {} } as const;

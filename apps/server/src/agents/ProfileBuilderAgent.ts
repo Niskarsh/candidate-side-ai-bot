@@ -35,6 +35,7 @@ Switching Criteria:
 Tools available:
 - linkedin_enrich(linkedin_url: string)
 - emit_question(question: string)
+- generate_overview(profile_data: object)
 
 Rules:
 1) If no LinkedIn URL but user seems willing, call emit_question to request it.
@@ -58,6 +59,64 @@ Always choose between:
   }): Promise<AgentRunResult> {
 
     const chatHistory = history.map(m => ({ role: m.role === "assistant" ? "model" : "user", text: m.content } as { role: "user" | "model" | "tool"; text: string; name?: string | undefined; }));
+
+    // Check if message contains a LinkedIn URL and we haven't enriched yet
+    // Also check history for LinkedIn URL
+    let linkedinUrlMatch = userMessage.match(/linkedin\.com\/in\/[\w-]+/i);
+    if (!linkedinUrlMatch) {
+      // Check recent history for LinkedIn URL
+      for (let i = history.length - 1; i >= Math.max(0, history.length - 5); i--) {
+        if (history[i].role === 'user') {
+          linkedinUrlMatch = history[i].content.match(/linkedin\.com\/in\/[\w-]+/i);
+          if (linkedinUrlMatch) break;
+        }
+      }
+    }
+    
+    if (linkedinUrlMatch && !priorProfile?.linkedinEnriched) {
+      const linkedinUrl = linkedinUrlMatch[0].startsWith('http') 
+        ? linkedinUrlMatch[0] 
+        : `https://www.${linkedinUrlMatch[0]}`;
+      console.log(`🔗 Found LinkedIn URL: ${linkedinUrl}, calling linkedin_enrich...`);
+      
+      // Directly call linkedin_enrich
+      const toolResult = await executeTool('linkedin_enrich', { linkedin_url: linkedinUrl });
+      console.log(`✅ LinkedIn enrichment result:`, JSON.stringify(toolResult, null, 2));
+      
+      // Extract the actual profile data (handle nested structure)
+      const profileData = toolResult.result?.data || toolResult.result;
+      
+      // Generate overview
+      const overviewResult = await executeTool('generate_overview', {
+        profile_data: toolResult.result
+      });
+      
+      console.log(`📋 Generated overview:`, overviewResult.result.overview);
+      
+      return {
+        messages: [
+          "✅ Got your LinkedIn profile!",
+          "",
+          "📋 **Profile Summary:**",
+          overviewResult.result.overview
+        ],
+        updatedProfile: {
+          ...priorProfile,
+          linkedinData: profileData,
+          profileOverview: overviewResult.result.overview,
+          linkedinEnriched: true,
+          // Store key fields at top level for easy access
+          full_name: profileData.full_name,
+          headline: profileData.headline,
+          company: profileData.company,
+          location: profileData.location,
+          skills: profileData.skills,
+          experiences: profileData.experiences,
+          educations: profileData.educations
+        },
+        takeBackControl: true
+      };
+    }
 
     // Step 1: plan; tool call or finish
     const step1 = await geminiPlanStep({
@@ -89,7 +148,7 @@ Always choose between:
         if (next.name === "emit_question") {
           return {
             messages: ["I need a bit more info to finish your profile."],
-            followUpQuestion: String(next.args?.question ?? "Could you clarify?"),
+            followUpQuestion: String((next.args as any)?.question ?? "Could you clarify?"),
             takeBackControl: false
           };
         }
@@ -108,7 +167,7 @@ Always choose between:
       } catch {
         // ✅ default: never return a silent turn
         return {
-          messages: ["I’ve analyzed what you shared. Do you want me to pull from LinkedIn, or build from Q&A instead?"],
+          messages: ["I've analyzed what you shared. Do you want me to pull from LinkedIn, or build from Q&A instead?"],
           takeBackControl: false
         };
       }
@@ -127,7 +186,7 @@ Always choose between:
     } catch {
       // Or pure talk
       return {
-        messages: [step1.text || "Got it. Share your LinkedIn URL and I’ll enrich your profile."],
+        messages: [step1.text || "Got it. Share your LinkedIn URL and I'll enrich your profile."],
         takeBackControl: false
       };
     }

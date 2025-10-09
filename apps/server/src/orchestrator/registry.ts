@@ -1,8 +1,10 @@
 import { Agent } from "../agents/Agent.js";
 import { ProfileBuilderAgent } from "../agents/ProfileBuilderAgent.js";
+import { AssessmentAgent } from "../agents/AssessmentAgent.js";
 
 const agents: Agent[] = [
   new ProfileBuilderAgent(),
+  new AssessmentAgent(),
   // add more agents here later
 ];
 
