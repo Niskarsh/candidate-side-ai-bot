@@ -45,8 +45,8 @@ export class Ikigai extends Agent {
     console.log('+++++++++++++++++++++', this.history);
     console.log('Ikigai run response:', JSON.stringify(response));
     let responseText = '';
-    let functionCall = response.candidates[0].content?.parts?.find((part: any) => part.functionCall)?.functionCall;
-    let respText = response.candidates[0].content?.parts?.find((part: any) => part.text)?.text;
+    let functionCall = response.candidates?.[0]?.content?.parts?.find((part: any) => part.functionCall)?.functionCall;
+    let respText = response.candidates?.[0]?.content?.parts?.find((part: any) => part.text)?.text;
     console.log('===================', respText);
     let parsedRespText = JSON.parse(respText || '{}');
     console.log(parsedRespText, '===================');
@@ -100,7 +100,11 @@ export class Ikigai extends Agent {
             let functionTool = this.fetchToolObjByName(functionCall.name);
             let orchestratorReply = await functionTool.run({ args: functionCall.args });
             console.log('^^%%%%%%%%%%%%%%%%^^^^^^^^^^', orchestratorReply)
-            this.history.push(response.candidates[0].content)
+            if (response.candidates?.[0]?.content) {
+              this.history.push(response.candidates[0].content);
+            } else {
+              console.warn("Response candidates or content is undefined");
+            }
             // Create a function response part
             const function_response_part = {
               name: IkigaiReplyToOrchestratorToolName,
@@ -119,7 +123,7 @@ export class Ikigai extends Agent {
                 responseSchema: IkigaiReturnSchema,
               },
             });
-            let finalResp = JSON.parse(postToolCall.candidates[0].content?.parts[0].text);
+            let finalResp = JSON.parse(postToolCall.candidates?.[0]?.content?.parts?.[0]?.text || '{}');
             // orchestratorThread.updatestate({ profile: finalResp.updatedProfile });
             orchestratorThread.userReply = finalResp.userReply;
             orchestratorThread.handleEndFocus({ endFocus: finalResp.endFocus });

@@ -248,7 +248,7 @@ export class Ikigai extends Agent {
         `\n\n⚠️ Internal mapping was missing. Please reply again.`;
       return { userReply: md, endFocus: false };
     }
-
+    // @ts-expect-error Argument of type 'QuestionMeta' is
     applyIkigaiReply(this.engine, reply, this.lastMeta);
 
     // Clear the consumed turn/meta

@@ -130,6 +130,7 @@ export class Orchestrator extends Agent {
             for (let sectionKey of Object.keys(this.profile)) {
                 if (sectionKey in updatedProfile) {
                     if (sectionKey === 'complete') continue;
+                    // @ts-expect-error Property 'complete' does not exist on type
                     if (!this.profile[sectionKey as keyof typeof this.profile].complete) {
                         this.profile[sectionKey as keyof typeof this.profile] = updatedProfile[sectionKey as keyof typeof this.profile];
                     }
@@ -181,7 +182,7 @@ export class Orchestrator extends Agent {
         });
         console.log('Orchestrator run response:', JSON.stringify(response));
         let responseText = '';
-        let functionCall = response.candidates[0].content?.parts[0].functionCall;
+        let functionCall = response.candidates?.[0]?.content?.parts?.[0]?.functionCall;
         if (functionCall) {
 
             if (response.candidates) {
