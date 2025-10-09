@@ -6,7 +6,7 @@ export const parameters = {
     type: Type.OBJECT,
     properties: {
         agentName: { type: Type.STRING },
-        detailedInput: { type: Type.STRING, description: "Detailed description on what this sub-agent is supposed to do, with what input. We will have separate system instructions, so this will more describe how to handle the input. Do add any relevant input here as well so it can be parsed by the sub-agent" }
+        detailedInput: { type: Type.STRING, description: "We will have separate system instructions, so pass the input passed from user here" }
     },
     required: ["agentName", "detailedInput"]
 };

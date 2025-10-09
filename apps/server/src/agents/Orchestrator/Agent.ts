@@ -29,6 +29,7 @@ export class Orchestrator extends Agent {
             details: string | null,
             complete: boolean;
         },
+        complete: boolean;
     };
     // currentState: {
     //     ikigaiCollected: boolean;
@@ -38,7 +39,7 @@ export class Orchestrator extends Agent {
     // }
     focusedAgent: string | null;
     aliveAgents: { name: string, agent: any }[];
-
+    userReply: string | null;
     constructor() {
         // @ts-expect-error The 'import.meta' meta-property is only allowed
         const __filename = fileURLToPath(import.meta.url);
@@ -77,9 +78,11 @@ export class Orchestrator extends Agent {
                 details: null,
                 complete: false,
             },
+            complete: false,
         };
         this.focusedAgent = null;
         this.aliveAgents = [];
+        this.userReply = null;
         if (this.WELCOME_MESSAGE) {
             this.history.push({ role: "model", content: this.WELCOME_MESSAGE });
         }
@@ -121,26 +124,52 @@ export class Orchestrator extends Agent {
         }
     }
 
+    updatestate({ profile: updatedProfile }: { profile?: any }) {
+        if (updatedProfile) {
+            // Only update sections of profile if complete is false for that section
+            for (let sectionKey of Object.keys(this.profile)) {
+                if (sectionKey in updatedProfile) {
+                    if (sectionKey === 'complete') continue;
+                    if (!this.profile[sectionKey as keyof typeof this.profile].complete) {
+                        this.profile[sectionKey as keyof typeof this.profile] = updatedProfile[sectionKey as keyof typeof this.profile];
+                    }
+                }
+            }
+            // After updating all sections, check if overall profile is complete
+            this.profile.complete = Object.keys(this.profile).every(sectionKey => {
+                if (sectionKey === 'complete') return true;
+                const section = this.profile[sectionKey as keyof typeof this.profile];
+                return typeof section === 'object' && section !== null && 'complete' in section && section.complete;
+            });
+
+        }
+    }
+
+    handleEndFocus({ endFocus }: { endFocus: boolean }) {
+        if (endFocus) {
+            this.focusedAgent = null;
+        }
+    }
+
     async step(message: string) {
 
         // If focussed agent is set, and alive, delegate to it directly
-        // if (this.focusedAgent) {
-        //     console.log('Delegating to focussed agent:', this.focusedAgent);
-        //     let focussedAgent = this.getFocussedAgentObject();
-        //     if (focussedAgent) {
-        //         let { userReply, updatedProfile, endFocus } = await focussedAgent.agent.step(message);
-        //         this.profile = updatedProfile;
-        //         if (endFocus) {
-        //             this.focusedAgent = null;
-        //         }
-        //         // this.history.push({ role: "model", content: userReply });
-        //         return {
-        //             messages: [userReply],
-        //             // messages: [],
-        //         }
-        //     }
-        //     throw new Error("Focussed agent delegation not implemented yet.");
-        // }
+        if (this.focusedAgent) {
+            console.log('Delegating to focussed agent:', this.focusedAgent);
+            let focussedAgent = this.getFocussedAgentObject();
+            if (focussedAgent) {
+                this.absorbMessage(message);
+                await focussedAgent.agent.step(message, this);
+                if (this.userReply) {
+                    this.absorbMessage(this.userReply, 'model');
+                }
+                return {
+                    messages: [this.userReply],
+                    // messages: [],
+                }
+            }
+            throw new Error("Focussed agent delegation not implemented yet.");
+        }
 
         console.log('Orchestrator stepping with message:', message);
         let subAgentList = await this.getSubAgentList();
@@ -148,6 +177,7 @@ export class Orchestrator extends Agent {
             userMessage: message,
             priorProfile: this.profile,
             subAgents: subAgentList,
+            // absorbMessage: false,
         });
         console.log('Orchestrator run response:', JSON.stringify(response));
         let responseText = '';
@@ -159,14 +189,16 @@ export class Orchestrator extends Agent {
                     switch (functionCall.name) {
                         case OrchestratorReplyToUserToolName: {
                             let functionTool = this.fetchToolObjByName(functionCall.name);
-                            let functionResponseText = await functionTool.run({ args: functionCall.args });
-                            // console.log('Function call response:', functionResponseText);
-                            responseText += functionResponseText;
+                            let functionResponseText = await functionTool.run({
+                                args: functionCall.args,
+                                orchestratorThread: this,
+                            });
+                            this.userReply = functionResponseText;
                             break;
                         }
                         case OrchestratorDelagateToSubAgentToolName: {
                             let functionTool = this.fetchToolObjByName(functionCall.name);
-                            let { userReply, focusedAgentName, focusedAgent, updatedProfile, endFocus } = await functionTool.run({
+                            let { focusedAgentName, focusedAgent } = await functionTool.run({
                                 args: functionCall.args,
                                 orchestratorThread: this,
                             });
@@ -182,15 +214,6 @@ export class Orchestrator extends Agent {
                                 }
                                 this.focusedAgent = focusedAgentName;
                             }
-                            if (updatedProfile) {
-                                this.profile = updatedProfile;
-                            }
-                            if (endFocus) {
-                                this.focusedAgent = null;
-                            }
-                            return {
-                                messages: [userReply],
-                            }
                             break;
                         }
                     }
@@ -198,9 +221,9 @@ export class Orchestrator extends Agent {
                 }
             }
         }
-        // this.history.push({ role: "model", content: responseText });
-
-        // console.log('history', this.history, 'resp', responseText);
+        if (this.userReply) {
+            this.absorbMessage(this.userReply, 'model');
+        }
         return {
             messages: [responseText],
             // messages: [],

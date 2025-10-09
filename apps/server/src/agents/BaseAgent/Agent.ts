@@ -73,6 +73,7 @@ export class Agent {
     ikigaiExerciseState,
     subAgents,
     config,
+    absorbMessage = true,
   }: {
     userMessage: string;
     priorProfile?: any;
@@ -103,9 +104,12 @@ export class Agent {
         block: number
       },
       // questionsDone: number,
-    }
+    },
+    absorbMessage?: boolean;
   }) {
-    this.history.push({ role: "user", content: userMessage });
+    if (absorbMessage !== undefined && absorbMessage === true) {
+      this.absorbMessage(userMessage);
+    }
     let updatedSystemPrompt = this.systemPrompt.replace("{{Current-State}}", JSON.stringify(priorProfile || {}));
     updatedSystemPrompt = updatedSystemPrompt.replace("{{Sub-Agents}}", JSON.stringify(subAgents || {}));
     if (isLinkedinDataPulled !== undefined) {
@@ -127,8 +131,8 @@ export class Agent {
     return response;
   };
 
-  absorbMessage(message: string) {
-    this.history.push({ role: "user", content: message });
+  absorbMessage(message: string, role: "user" | "model" = "user") {
+    this.history.push({ role, content: message });
   }
 
   getWelcome() {

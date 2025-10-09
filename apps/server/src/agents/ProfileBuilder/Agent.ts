@@ -8,6 +8,7 @@ import { name as ProfileBuilderReplyToOrchestratorToolName } from './tools/Reply
 import { name as ProfileBuilderUpdateProfileFromUserInputsToolName } from './tools/UpdateProfileFromUserInputs/ToolDetails';
 import { geminiGenAI } from "../../services/gemini";
 import { LinkedInProfileSchema, ProfileBuilderReturnSchema } from "./Schemas";
+import { Orchestrator } from "../Orchestrator/Agent";
 export class ProfileBuilder extends Agent {
     currentState: {
         profile: {
@@ -31,8 +32,8 @@ export class ProfileBuilder extends Agent {
                 details: string | null,
                 complete: boolean;
             },
+            complete: boolean;
         };
-        ikigaiCollected: boolean;
         linkedinDataPulled: boolean;
     };
 
@@ -68,8 +69,8 @@ export class ProfileBuilder extends Agent {
                     details: null,
                     complete: false,
                 },
+                complete: false,
             },
-            ikigaiCollected: false,
             linkedinDataPulled: false,
         };
         if (this.WELCOME_MESSAGE) {
@@ -77,13 +78,13 @@ export class ProfileBuilder extends Agent {
         }
     }
 
-    async step(message: string) {
+    async step(message: string, orchestratorThread: Orchestrator) {
         // this.absorbMessage(message);
         console.log('ProfileBuilder stepping with message:', message);
         const response = await this.run({ userMessage: message, priorProfile: this.currentState.profile, isLinkedinDataPulled: this.currentState.linkedinDataPulled });
         console.log('ProfileBuilder run response:', JSON.stringify(response));
         let responseText = '';
-        let functionCall = response.candidates[0].content?.parts[0].functionCall;
+        let functionCall = response.candidates[0].content?.parts?.find((part: any) => part.functionCall)?.functionCall;
         if (functionCall) {
             if (functionCall.name) {
                 switch (functionCall.name) {
@@ -111,13 +112,16 @@ export class ProfileBuilder extends Agent {
                             },
                         });
                         let finalResp = JSON.parse(postToolCall.candidates[0].content?.parts[0].text);
-                        this.currentState.profile = finalResp.updatedProfile;
+                        orchestratorThread.updatestate({ profile: finalResp.updatedProfile });
+                        orchestratorThread.userReply = finalResp.userReply;
+                        orchestratorThread.handleEndFocus({ endFocus: finalResp.endFocus });
+                        // this.currentState.profile = finalResp.updatedProfile;
                         console.log('^^^^^^^^^^^^^^^^^^^^', finalResp.userReply, finalResp.endFocus);
-                        return {
-                            updatedProfile: finalResp.updatedProfile,
-                            userReply: finalResp.userReply,
-                            endFocus: finalResp.endFocus,
-                        }
+                        // return {
+                        //     updatedProfile: finalResp.updatedProfile,
+                        //     userReply: finalResp.userReply,
+                        //     endFocus: finalResp.endFocus,
+                        // }
                         break;
                     }
                     case ProfileBuilderReplyToOrchestratorToolName: {
@@ -144,12 +148,15 @@ export class ProfileBuilder extends Agent {
                         });
                         let finalResp = JSON.parse(postToolCall.candidates[0].content?.parts[0].text);
                         this.currentState.profile = finalResp.updatedProfile;
-                        console.log('^^^^^^^^^^^^^^^^^^^^', finalResp.userReply, finalResp.endFocus);
-                        return {
-                            updatedProfile: finalResp.updatedProfile,
-                            userReply: finalResp.userReply,
-                            endFocus: finalResp.endFocus,
-                        }
+                        orchestratorThread.updatestate({ profile: finalResp.updatedProfile });
+                        orchestratorThread.userReply = finalResp.userReply;
+                        orchestratorThread.handleEndFocus({ endFocus: finalResp.endFocus });
+                        console.log('^^^^^^^^^^^^^^^^^^^^', finalResp.userReply, finalResp.endFocus, finalResp.updatedProfile);
+                        // return {
+                        //     updatedProfile: finalResp.updatedProfile,
+                        //     userReply: finalResp.userReply,
+                        //     endFocus: finalResp.endFocus,
+                        // }
                         break;
                     }
                     case ProfileBuilderUpdateProfileFromUserInputsToolName: {
@@ -197,17 +204,20 @@ export class ProfileBuilder extends Agent {
                         let finalResp = JSON.parse(postToolCall.candidates[0].content?.parts[0].text);
                         this.currentState.profile = finalResp.updatedProfile;
                         console.log('^^^^^^^^^^^^^^^^^^^^', finalResp.userReply, finalResp.endFocus);
-                        return {
-                            updatedProfile: finalResp.updatedProfile,
-                            userReply: finalResp.userReply,
-                            endFocus: finalResp.endFocus,
-                        }
+                        orchestratorThread.updatestate({ profile: finalResp.updatedProfile });
+                        orchestratorThread.userReply = finalResp.userReply;
+                        orchestratorThread.handleEndFocus({ endFocus: finalResp.endFocus });
+                        // return {
+                        //     stateUpdate: { updatedProfile: finalResp.updatedProfile },
+                        //     userReply: finalResp.userReply,
+                        //     endFocus: finalResp.endFocus,
+                        // }
                         break;
                     }
                 }
 
             }
         }
-        return { userReply: '', updatedProfile: {}, endFocus: false }
+        // return { userReply: '', updatedProfile: {}, endFocus: false }
     }
 }
